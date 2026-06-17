@@ -1,0 +1,12 @@
+flowchart TD
+    A[New Output] --> B{What owns it?}
+    B -->|Project deliverable| C[Project repo or workspace]
+    B -->|Evidence / logs| D[Dated artifact directory]
+    B -->|Reusable reference| E[Indexed knowledge base or artifact store]
+    B -->|Temporary experiment| F[Named scratch area + cleanup expectation]
+    B -->|User-facing file| G[Delivery folder or attached artifact]
+    C --> H[Record verification]
+    D --> H
+    E --> H
+    F --> H
+    G --> H

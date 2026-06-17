@@ -1,0 +1,10 @@
+flowchart TB
+    T[Intent Translator] --> O[Orchestrator]
+    O --> W[Implementation Agent]
+    W --> E[Evidence + Owned Outputs]
+    E --> C[Critic / Reviewer]
+    C --> J[Evidence Judge]
+    O --> L[Local / Privileged Executor]
+    O --> R[Independent Reviewer]
+    R --> J
+    L --> E

@@ -1,0 +1,7 @@
+flowchart LR
+    A[Public Web / External APIs] --> B[Remote Sandbox]
+    B --> C[Orchestration Layer]
+    C --> D{Trust Boundary}
+    D --> E[Local / Privileged Executor]
+    E --> F[Local Files / GUI / Secrets / Production]
+    C --> G[Evidence Store / Final Report]

@@ -1,0 +1,12 @@
+flowchart TD
+    A[Human Intent] --> B[Intent Translator]
+    B --> C[Mission Contract]
+    C --> D[Orchestrator]
+    D --> E[Implementation Agent]
+    E --> F[Evidence + Owned Outputs]
+    F --> G[Critic / Reviewer]
+    G --> H{Evidence Judge}
+    H -->|Pass| I[User-facing Result]
+    H -->|Missing Evidence| D
+    H -->|Wrong Boundary| J[Local or Privileged Execution]
+    J --> F
