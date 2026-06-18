@@ -41,8 +41,5 @@ jobs:
       - name: Validate Mermaid diagrams
         run: npm run lint:mermaid
 
-      - name: Check links
-        uses: lycheeverse/lychee-action@v2
-        with:
-          args: --no-progress --exclude-mail --accept 200,206,429 README.md THREAT_MODEL.md PUBLISH_CHECKLIST.md LICENSE_OPTIONS.md examples/**/*.md
-          fail: true
+      - name: Check local Markdown links
+        run: npm run validate

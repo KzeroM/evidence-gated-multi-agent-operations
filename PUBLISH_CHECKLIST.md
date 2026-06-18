@@ -27,7 +27,7 @@ Use this before posting the package to a repository, gist, blog, or documentatio
 - [ ] `README.md` is the entry point.
 - [ ] `diagrams/` files match the inline Mermaid diagrams.
 - [ ] `schemas/` and `examples/` validate locally or in CI.
-- [ ] `.github/workflows/validate.yml` runs validation, Markdown lint, link check, Mermaid render, and sanitization scan.
+- [ ] `.github/workflows/validate.yml` runs validation, Markdown lint, local link check, Mermaid validation, and sanitization scan.
 - [ ] Archive/repository contains only publishable files.
 
 ## Final evidence
@@ -35,6 +35,6 @@ Use this before posting the package to a repository, gist, blog, or documentatio
 - [ ] Sanitization search returns zero matches for private terms.
 - [ ] Schema/example validation passes.
 - [ ] Markdown structural check passes.
-- [ ] Link check passes or known external failures are documented.
+- [ ] Local link check passes or known external link limitations are documented.
 - [ ] Mermaid diagrams render.
 - [ ] Archive contents were listed and reviewed.
