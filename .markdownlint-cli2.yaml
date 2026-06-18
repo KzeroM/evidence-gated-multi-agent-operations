@@ -1,0 +1,3 @@
+config:
+  MD013: false # line length is intentionally not enforced for readable tables and examples
+  MD033: false # allow occasional inline HTML if future diagrams or badges need it

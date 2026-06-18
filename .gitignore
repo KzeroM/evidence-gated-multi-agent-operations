@@ -6,6 +6,7 @@ Thumbs.db
 
 # Local build outputs
 /dist/
+/node_modules/
 *.zip
 *.tar.gz
 

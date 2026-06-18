@@ -1,0 +1,10 @@
+{
+  "scripts": {
+    "validate": "python3 scripts/validate.py",
+    "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
+    "lint:mermaid": "bash scripts/validate-mermaid.sh"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.17.2"
+  }
+}

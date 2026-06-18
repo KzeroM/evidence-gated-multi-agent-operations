@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/evidence-gated-multi-agent-operations/schemas/mission-contract.schema.json",
+  "title": "Mission Contract",
+  "type": "object",
+  "required": ["mission"],
+  "additionalProperties": false,
+  "properties": {
+    "mission": {
+      "type": "object",
+      "required": [
+        "objective",
+        "non_goals",
+        "assumptions",
+        "success_criteria",
+        "allowed_side_effects",
+        "output_ownership",
+        "local_required",
+        "risk_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "objective": {"type": "string", "minLength": 1},
+        "non_goals": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "assumptions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "success_criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["criterion", "required_evidence"],
+            "additionalProperties": false,
+            "properties": {
+              "criterion": {"type": "string", "minLength": 1},
+              "required_evidence": {
+                "oneOf": [
+                  {"type": "string", "minLength": 1},
+                  {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+                ]
+              }
+            }
+          }
+        },
+        "allowed_side_effects": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "output_ownership": {
+          "type": "object",
+          "required": ["owner", "expected_location", "retention", "retrieval_method"],
+          "additionalProperties": false,
+          "properties": {
+            "owner": {"type": "string", "enum": ["project", "artifact store", "scratch", "user-delivery", "local-only"]},
+            "expected_location": {"type": "string", "minLength": 1},
+            "retention": {"type": "string", "enum": ["temporary", "task artifact", "project lifetime", "long-term reference"]},
+            "retrieval_method": {"type": "string", "minLength": 1}
+          }
+        },
+        "local_required": {"type": "boolean"},
+        "risk_level": {"type": "string", "enum": ["low", "medium", "high"]}
+      }
+    }
+  }
+}

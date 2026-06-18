@@ -10,11 +10,15 @@ The pattern is built around one rule:
 
 ```text
 README.md                         # Main public reference
+THREAT_MODEL.md                   # Public threat model and independence criteria
 PUBLISH_CHECKLIST.md              # Pre-publication checklist
 LICENSE                           # Creative Commons Attribution 4.0 International
 LICENSE_OPTIONS.md                # Owner-facing license decision notes
 diagrams/                         # Standalone Mermaid diagrams
-examples/                         # Reusable mission/report templates
+examples/                         # Reusable mission/report templates and case studies
+schemas/                          # JSON Schemas for mission contracts and final reports
+scripts/                          # Repository validation scripts
+.github/workflows/                # CI validation for docs, schemas, diagrams, links, and sanitization
 ```
 
 ---
@@ -123,7 +127,7 @@ mission:
   risk_level: low
 ```
 
-Good mission contracts are compact, explicit, and testable.
+Good mission contracts are compact, explicit, and testable. The repository includes a machine-checkable schema at [`schemas/mission-contract.schema.json`](schemas/mission-contract.schema.json).
 
 ---
 
@@ -140,7 +144,7 @@ Different tasks require different proof.
 | API integration | Live request/response sample with secrets redacted |
 | Local-only task | Structured handoff or local execution report with artifacts |
 | Architecture decision | Tradeoff memo plus critic pass or explicitly accepted risks |
-| Public reference material | Sanitized draft, provenance, output location, and retrieval check |
+| Public reference material | Sanitized draft, provenance, output location, retrieval check, and validation run |
 
 Rule of thumb:
 
@@ -327,7 +331,7 @@ next_actions_if_needed:
   - "Specific next step, owner, and stop condition"
 ```
 
-Avoid final reports that only say "done" or "looks good." The report should expose evidence and output provenance.
+Avoid final reports that only say "done" or "looks good." The report should expose evidence and output provenance. The repository includes a machine-checkable schema at [`schemas/final-report.schema.json`](schemas/final-report.schema.json) and an end-to-end example in [`examples/case-study-001/`](examples/case-study-001/).
 
 ---
 
@@ -363,6 +367,8 @@ Before publishing an implementation or case study:
 - [ ] Separate the reusable architectural pattern from private operational details.
 - [ ] Confirm diagrams and examples use neutral role names.
 - [ ] Confirm output locations in examples are illustrative, not private infrastructure details.
+- [ ] Validate mission contracts and final reports against the schemas.
+- [ ] Run Markdown, link, Mermaid, and sanitization checks before publishing.
 
 ---
 
