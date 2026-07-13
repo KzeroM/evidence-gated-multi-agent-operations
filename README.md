@@ -1,5 +1,7 @@
 # Evidence-Gated Multi-Agent Operations
 
+[English](README.md) / [한국어](README.ko.md)
+
 A vendor-neutral operating pattern for complex AI-assisted work where **intent translation, orchestration, execution, critique, output ownership, and completion judgment are separated**.
 
 The pattern is built around one rule:
@@ -10,6 +12,7 @@ The pattern is built around one rule:
 
 ```text
 README.md                         # Main public reference
+README.ko.md                      # Korean translation
 THREAT_MODEL.md                   # Public threat model and independence criteria
 PUBLISH_CHECKLIST.md              # Pre-publication checklist
 SECURITY.md                       # Safe vulnerability-reporting guidance
