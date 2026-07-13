@@ -7,6 +7,9 @@ Thumbs.db
 # Local build outputs
 /dist/
 /node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
 *.zip
 *.tar.gz
 

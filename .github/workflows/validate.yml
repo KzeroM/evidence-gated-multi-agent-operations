@@ -35,6 +35,9 @@ jobs:
       - name: Validate schemas, examples, and sanitization
         run: npm run validate
 
+      - name: Run validator regression tests
+        run: npm test
+
       - name: Lint Markdown
         run: npm run lint:markdown
 

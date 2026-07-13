@@ -1,0 +1,29 @@
+mission_ref: "example-mission-0001"
+execution_ref: "example-execution-0001"
+collected_at: "2026-01-15T12:00:00Z"
+collected_by_role: "implementation agent"
+
+criterion_evidence:
+  - criterion: "The requested artifact exists at its owned location."
+    evidence: "Read-back of docs/example-reference.md and validation output."
+    result: "The artifact exists and the deterministic checks pass."
+
+commands:
+  - intent: "Validate schemas, examples, links, and sanitization."
+    command: "npm run validate"
+    exit_status: 0
+    output_summary: "Validation completed without findings."
+
+artifacts:
+  - path_or_url: "docs/example-reference.md"
+    purpose: "Fictional project reference artifact."
+    owner: "project"
+    retention: "project lifetime"
+    retrieval: "Version-controlled project path."
+    integrity: "Record a commit identifier or digest when the artifact is finalized."
+
+assumptions:
+  - "No external factual claims require a current source check."
+
+known_limits:
+  - "Deterministic validation checks structure and known patterns, not factual truth."

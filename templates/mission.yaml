@@ -1,0 +1,24 @@
+mission:
+  objective: "Produce a public-safe reference artifact for a fictional project."
+  non_goals:
+    - "Access private systems or publish private operational context."
+    - "Change production configuration."
+  assumptions:
+    - "All identifiers and inputs supplied to the task are fictional or already public."
+  success_criteria:
+    - criterion: "The requested artifact exists at its owned location."
+      required_evidence:
+        - "Artifact path and content read-back."
+        - "Relevant deterministic validation output."
+    - criterion: "The result is safe for public release."
+      required_evidence: "Sanitization scan and independent review both pass."
+  allowed_side_effects:
+    - "Create or edit files inside the project repository."
+    - "Run local, non-destructive validation commands."
+  output_ownership:
+    owner: "project"
+    expected_location: "docs/example-reference.md"
+    retention: "project lifetime"
+    retrieval_method: "Version-controlled project path."
+  local_required: false
+  risk_level: low

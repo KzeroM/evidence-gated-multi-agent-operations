@@ -12,14 +12,42 @@ The pattern is built around one rule:
 README.md                         # Main public reference
 THREAT_MODEL.md                   # Public threat model and independence criteria
 PUBLISH_CHECKLIST.md              # Pre-publication checklist
+SECURITY.md                       # Safe vulnerability-reporting guidance
+CONTRIBUTING.md                   # Public-safe contribution and validation guide
+CODE_OF_CONDUCT.md                # Community expectations and enforcement
 LICENSE                           # Creative Commons Attribution 4.0 International
 LICENSE_OPTIONS.md                # Owner-facing license decision notes
 diagrams/                         # Standalone Mermaid diagrams
 examples/                         # Reusable mission/report templates and case studies
-schemas/                          # JSON Schemas for mission contracts and final reports
+templates/                        # Ready-to-copy mission, evidence, review, and handoff files
+schemas/                          # JSON Schemas for contracts, evidence, reviews, and reports
 scripts/                          # Repository validation scripts
+tests/                            # Sanitization and validation regression tests
 .github/workflows/                # CI validation for docs, schemas, diagrams, links, and sanitization
 ```
+
+## Quick start
+
+Install the validation dependencies and run the same checks used by CI:
+
+```bash
+python3 -m pip install -r requirements-dev.txt
+npm ci
+npm run validate
+npm test
+npm run lint:markdown
+npm run lint:mermaid
+```
+
+Start a new evidence-gated task by copying the standalone templates:
+
+```bash
+cp templates/mission.yaml mission.yaml
+cp templates/evidence.yaml evidence.yaml
+cp templates/critic-review.yaml critic-review.yaml
+```
+
+Use [`templates/local-handoff.md`](templates/local-handoff.md) only when work must cross into a local or privileged boundary. The schema-backed final-report template remains at [`examples/final-report-template.md`](examples/final-report-template.md).
 
 ---
 

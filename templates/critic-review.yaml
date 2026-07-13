@@ -1,0 +1,26 @@
+mission_ref: "example-mission-0001"
+execution_ref: "example-execution-0001"
+review_ref: "example-review-0001"
+reviewed_at: "2026-01-15T13:00:00Z"
+reviewer_role: "critic"
+
+verdict: "PASS"
+
+spec_compliance:
+  - "The artifact matches the mission objective and allowed scope."
+
+evidence_assessment:
+  - criterion: "The requested artifact exists at its owned location."
+    status: "satisfied"
+    rationale: "The read-back and deterministic validation support the claim."
+
+trust_boundary_assessment:
+  - "No local or privileged boundary was crossed."
+
+public_safety_assessment:
+  - "Examples are fictional and the sanitization check passes."
+
+findings: []
+must_fix: []
+can_defer:
+  - "Add task-specific semantic checks if this template is adapted to higher-risk work."

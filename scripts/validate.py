@@ -8,6 +8,7 @@ small, inspectable rules so the reference package remains vendor-neutral.
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import re
 import sys
@@ -21,6 +22,14 @@ SCHEMAS = ROOT / "schemas"
 
 MISSION_SCHEMA = json.loads((SCHEMAS / "mission-contract.schema.json").read_text())
 FINAL_REPORT_SCHEMA = json.loads((SCHEMAS / "final-report.schema.json").read_text())
+EVIDENCE_SCHEMA = json.loads((SCHEMAS / "evidence.schema.json").read_text())
+CRITIC_REVIEW_SCHEMA = json.loads((SCHEMAS / "critic-review.schema.json").read_text())
+
+STANDALONE_TEMPLATE_SCHEMAS = {
+    "templates/mission.yaml": MISSION_SCHEMA,
+    "templates/evidence.yaml": EVIDENCE_SCHEMA,
+    "templates/critic-review.yaml": CRITIC_REVIEW_SCHEMA,
+}
 
 PRIVATE_PATTERNS = [
     r"Z-[A-Za-z]+",
@@ -33,7 +42,25 @@ PRIVATE_PATTERNS = [
     r"127\.0\.0\.1:[0-9]{2,5}",
     r"(?i)(api[_-]?key|secret|token|cookie)\s*[:=]\s*['\"]?[A-Za-z0-9_\-.]{8,}",
 ]
-ALLOW_PRIVATE_PATTERN_FILES = {"examples/sanitization-search.txt", "scripts/validate.py"}
+ALLOW_PRIVATE_PATTERN_FILES = {
+    "examples/sanitization-search.txt",
+    "scripts/validate.py",
+    "tests/test_validate.py",
+}
+
+EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
+IPV4_RE = re.compile(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])")
+PRIVATE_PATH_RE = re.compile(
+    r"(?<![A-Za-z0-9_.-])/(?:home|Users|root|private|var/log|var/lib)/[A-Za-z0-9._~/-]+"
+)
+CHAT_ID_RE = re.compile(
+    r"\b(?:chat|channel|room)[_-]?id\b\s*[:=]\s*['\"]?[-A-Z0-9]{6,}",
+    re.IGNORECASE,
+)
+PRIVATE_HOST_RE = re.compile(
+    r"\b[A-Za-z0-9][A-Za-z0-9-]{1,62}\.(?:internal|local)\b",
+    re.IGNORECASE,
+)
 
 
 def iter_markdown_files() -> list[Path]:
@@ -99,6 +126,19 @@ def validate_schema_files() -> list[str]:
     return errors
 
 
+def validate_standalone_templates() -> list[str]:
+    errors: list[str] = []
+    for rel, schema in STANDALONE_TEMPLATE_SCHEMAS.items():
+        path = ROOT / rel
+        try:
+            parsed = yaml.safe_load(path.read_text())
+        except Exception as exc:  # pragma: no cover - diagnostic path
+            errors.append(f"{rel}: invalid YAML: {exc}")
+            continue
+        errors.extend(validate_instance(parsed, schema, rel))
+    return errors
+
+
 def validate_local_markdown_links() -> list[str]:
     errors: list[str] = []
     link_re = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
@@ -124,6 +164,50 @@ def validate_local_markdown_links() -> list[str]:
     return errors
 
 
+def _allowed_ipv4(value: str) -> bool:
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    documentation_networks = (
+        ipaddress.ip_network("192.0.2.0/24"),
+        ipaddress.ip_network("198.51.100.0/24"),
+        ipaddress.ip_network("203.0.113.0/24"),
+    )
+    return any(address in network for network in documentation_networks)
+
+
+def sanitization_findings(rel: str, text: str) -> list[str]:
+    errors: list[str] = []
+
+    for match in EMAIL_RE.finditer(text):
+        domain = match.group(1).lower()
+        if domain != "example.org" and not domain.endswith(".example.org"):
+            line = text.count("\n", 0, match.start()) + 1
+            errors.append(f"{rel}:{line}: non-example email address")
+
+    for match in IPV4_RE.finditer(text):
+        if not _allowed_ipv4(match.group(0)):
+            line = text.count("\n", 0, match.start()) + 1
+            errors.append(f"{rel}:{line}: non-documentation IPv4 address")
+
+    for label, pattern in (
+        ("private filesystem path", PRIVATE_PATH_RE),
+        ("chat identifier", CHAT_ID_RE),
+        ("private hostname", PRIVATE_HOST_RE),
+    ):
+        for match in pattern.finditer(text):
+            line = text.count("\n", 0, match.start()) + 1
+            errors.append(f"{rel}:{line}: {label}")
+
+    for pattern in PRIVATE_PATTERNS:
+        for match in re.finditer(pattern, text):
+            line = text.count("\n", 0, match.start()) + 1
+            errors.append(f"{rel}:{line}: sanitization pattern matched: {pattern}")
+
+    return errors
+
+
 def sanitization_scan() -> list[str]:
     errors: list[str] = []
     files = [p for p in ROOT.rglob("*") if p.is_file() and ".git" not in p.parts and "node_modules" not in p.parts]
@@ -134,10 +218,7 @@ def sanitization_scan() -> list[str]:
         if path.suffix not in {".md", ".txt", ".json", ".yml", ".yaml", ".mmd", ".py"}:
             continue
         text = path.read_text(errors="ignore")
-        for pattern in PRIVATE_PATTERNS:
-            for match in re.finditer(pattern, text):
-                line = text.count("\n", 0, match.start()) + 1
-                errors.append(f"{rel}:{line}: sanitization pattern matched: {pattern}")
+        errors.extend(sanitization_findings(rel, text))
     return errors
 
 
@@ -145,6 +226,7 @@ def main() -> int:
     errors = []
     errors.extend(validate_schema_files())
     errors.extend(validate_yaml_examples())
+    errors.extend(validate_standalone_templates())
     errors.extend(validate_local_markdown_links())
     errors.extend(sanitization_scan())
 
