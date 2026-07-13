@@ -49,7 +49,7 @@ ALLOW_PRIVATE_PATTERN_FILES = {
 }
 
 EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+-]+@([A-Za-z0-9.-]+\.[A-Za-z]{2,})\b")
-IPV4_RE = re.compile(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])")
+IPV4_RE = re.compile(r"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?!\d|\.\d)")
 PRIVATE_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9_.-])/(?:home|Users|root|private|var/log|var/lib)/[A-Za-z0-9._~/-]+"
 )

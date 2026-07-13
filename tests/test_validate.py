@@ -29,6 +29,11 @@ class SanitizationTests(unittest.TestCase):
         text = "Contact reviewer" + "@" + "example.org at 192.0.2.20."
         self.assertEqual(self.findings(text), [])
 
+    def test_documentation_address_is_recognized_before_sentence_period(self) -> None:
+        match = VALIDATOR.IPV4_RE.search("Use 192.0.2.20.")
+        self.assertIsNotNone(match)
+        self.assertTrue(VALIDATOR._allowed_ipv4(match.group(0)))
+
     def test_rejects_non_example_email(self) -> None:
         text = "Contact operator" + "@" + "company.invalid."
         self.assertTrue(any("non-example email" in item for item in self.findings(text)))
