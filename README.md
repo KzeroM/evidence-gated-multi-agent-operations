@@ -59,9 +59,10 @@ Execution records can represent `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNIN
 - Medium risk requires explicit contract approval before execution.
 - High-risk or production work requires explicit scoped approval with expiry and a rollback or compensation plan.
 - Production is always classified high risk.
-- High risk requires a reviewer runtime and review execution distinct from the worker and worker execution, with read-only review access.
+- Medium and high risk require a reviewer runtime and review execution distinct from the worker and worker execution, with read-only review access.
+- Low risk may retain policy-based or logical reviewer separation, but must still disclose reviewer provenance.
 
-Reviewer provenance records reviewer identity, runtime/model references, separate execution references, context sources and scope, access mode, conflicts, and read-only status. Logical separation is useful at all levels; v2 makes runtime separation mechanically mandatory for high risk.
+Reviewer provenance records reviewer identity, runtime/model references, separate execution references, context sources and scope, access mode, conflicts, and read-only status. The validator checks the medium/high independence rule across the mission, execution, and review records; it remains a protocol validator and does not launch or isolate reviewers.
 
 Allowed side effects are capabilities rather than prose: filesystem read/write globs, network domains, and deployment, database-mutation, and messaging flags. Enforcement belongs to the surrounding environment; the protocol makes the grant inspectable.
 
@@ -126,7 +127,7 @@ Mermaid validation uses the real Mermaid CLI renderer for standalone and inline 
 
 ## Migration from v1
 
-Version 2 is intentionally breaking. V1 shape-based Markdown dispatch, copied criterion prose, free-form side effects/evidence, unversioned reviews, and `PASS_WITH_DEFERRALS` are not accepted. Add the document discriminator/version, assign stable IDs, convert side effects and evidence to typed objects, add immutable subject and freshness metadata, create an execution record, capture reviewer provenance, and use `PASS` plus structured `deferrals` only when all criteria are satisfied. Keep a v1 archive separate if historical fidelity is required.
+Version 2 is intentionally breaking. V1 shape-based Markdown dispatch, copied criterion prose, free-form side effects/evidence, unversioned reviews, and `PASS_WITH_DEFERRALS` are not accepted. Add the document discriminator/version, assign stable IDs, convert side effects and evidence to typed objects, add immutable subject and freshness metadata, create an execution record, capture reviewer provenance, and use `PASS` plus structured `deferrals` only when all criteria are satisfied. Keep a v1 archive separate if historical fidelity is required. Existing v2 document shapes remain compatible; medium-risk packets must now satisfy the same runtime, execution, and read-only reviewer-independence checks already required for high risk.
 
 ## Deployment profiles
 

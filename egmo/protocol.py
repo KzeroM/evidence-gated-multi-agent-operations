@@ -14,7 +14,8 @@ from typing import Any, Iterable
 from urllib.parse import urlparse
 
 import yaml
-from jsonschema import Draft202012Validator, FormatChecker, RefResolver
+from jsonschema import Draft202012Validator, FormatChecker
+from referencing import Registry, Resource
 
 SOURCE_ROOT = Path(__file__).resolve().parents[1]
 ROOT = SOURCE_ROOT if (SOURCE_ROOT / "pyproject.toml").is_file() else Path.cwd().resolve()
@@ -101,16 +102,15 @@ class LoadedDocument:
     label: str
 
 
-def _schema_registry() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+def _schema_registry() -> tuple[dict[str, dict[str, Any]], Registry]:
     schemas: dict[str, dict[str, Any]] = {}
-    store: dict[str, dict[str, Any]] = {}
+    resources: list[tuple[str, Resource[dict[str, Any]]]] = []
     for path in sorted(SCHEMA_DIR.glob("*.schema.json")):
         schema = json.loads(path.read_text(encoding="utf-8"))
         Draft202012Validator.check_schema(schema)
         schemas[path.name] = schema
-        store[schema["$id"]] = schema
-        store[path.name] = schema
-    return schemas, store
+        resources.append((schema["$id"], Resource.from_contents(schema)))
+    return schemas, Registry().with_resources(resources)
 
 
 def validate_document(document: dict[str, Any], label: str = "document") -> list[str]:
@@ -123,10 +123,9 @@ def validate_document(document: dict[str, Any], label: str = "document") -> list
     filename = SCHEMA_FILES.get(kind)
     if filename is None:
         return [f"{label}: unsupported document_type {kind!r}"]
-    schemas, store = _schema_registry()
-    resolver = RefResolver.from_schema(schemas[filename], store=store)
+    schemas, registry = _schema_registry()
     validator = Draft202012Validator(
-        schemas[filename], resolver=resolver, format_checker=FORMAT_CHECKER
+        schemas[filename], registry=registry, format_checker=FORMAT_CHECKER
     )
     errors: list[str] = []
     for error in sorted(validator.iter_errors(document), key=lambda item: list(item.absolute_path)):
@@ -458,15 +457,15 @@ def validate_chain(documents: Iterable[LoadedDocument], as_of: datetime | None =
                 f"{review.label}: provenance worker_execution_ref does not match "
                 "reviewed worker execution"
             )
-        if risk["level"] == "high":
+        if risk["level"] in {"medium", "high"}:
             if provenance["runtime_ref"] == execution.data["worker_runtime_ref"]:
-                errors.append(f"{review.label}: high-risk review runtime must differ from worker runtime")
+                errors.append(f"{review.label}: medium/high-risk review runtime must differ from worker runtime")
             if data["review_execution_id"] == execution.data["worker_execution_id"]:
-                errors.append(f"{review.label}: high-risk review execution must differ from worker execution")
+                errors.append(f"{review.label}: medium/high-risk review execution must differ from worker execution")
             if not provenance["read_only"]:
-                errors.append(f"{review.label}: high-risk reviewer must be read-only")
+                errors.append(f"{review.label}: medium/high-risk reviewer must be read-only")
             if provenance["access_mode"] != "read_only":
-                errors.append(f"{review.label}: high-risk review access_mode must be read_only")
+                errors.append(f"{review.label}: medium/high-risk review access_mode must be read_only")
         if provenance["access_mode"] == "read_write" and provenance["read_only"]:
             errors.append(f"{review.label}: read_write access_mode cannot claim read_only status")
         reviewed_at = _parse_time(data["reviewed_at"])

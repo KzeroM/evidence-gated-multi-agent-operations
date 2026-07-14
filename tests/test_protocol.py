@@ -50,12 +50,33 @@ def mutable_template_chain() -> list[LoadedDocument]:
 
 
 class SchemaDispatchTests(unittest.TestCase):
+    def test_normal_validation_emits_no_deprecation_warnings(self) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-W", "error",
+                "-c",
+                "from egmo.protocol import validate_document; "
+                "assert validate_document({'schema_version': '2.0'})",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_every_supported_template_validates(self) -> None:
         docs = template_chain()
         self.assertEqual({doc.data["document_type"] for doc in docs}, {
             "mission_contract", "execution_record", "evidence_record", "critic_review", "final_report"
         })
         self.assertEqual(validate_chain(docs), [])
+
+    def test_external_common_schema_ref_resolves_from_source_checkout(self) -> None:
+        review = copy.deepcopy(document_of_type(template_chain(), "critic_review").data)
+        review["review_id"] = "x"
+        errors = validate_document(review, "source-ref")
+        self.assertTrue(any("review_id" in item and "too short" in item for item in errors))
 
     def test_missing_discriminator_is_rejected(self) -> None:
         self.assertTrue(validate_document({"schema_version": "2.0"})[0].endswith(
@@ -160,8 +181,22 @@ class EndToEndNegativeTests(unittest.TestCase):
         review.data["provenance"]["runtime_ref"] = execution.data["worker_runtime_ref"]
         review.data["review_execution_id"] = execution.data["worker_execution_id"]
         errors = validate_chain(docs)
-        self.assertTrue(any("runtime must differ" in item for item in errors))
-        self.assertTrue(any("execution must differ" in item for item in errors))
+        self.assertTrue(any("medium/high-risk review runtime must differ" in item for item in errors))
+        self.assertTrue(any("medium/high-risk review execution must differ" in item for item in errors))
+
+    def test_medium_risk_non_independence_and_write_access_fail(self) -> None:
+        docs = self.mutate()
+        execution = document_of_type(docs, "execution_record")
+        review = document_of_type(docs, "critic_review")
+        review.data["provenance"]["runtime_ref"] = execution.data["worker_runtime_ref"]
+        review.data["review_execution_id"] = execution.data["worker_execution_id"]
+        review.data["provenance"]["access_mode"] = "read_write"
+        review.data["provenance"]["read_only"] = False
+        errors = validate_chain(docs)
+        self.assertTrue(any("medium/high-risk review runtime must differ" in item for item in errors))
+        self.assertTrue(any("medium/high-risk review execution must differ" in item for item in errors))
+        self.assertTrue(any("medium/high-risk reviewer must be read-only" in item for item in errors))
+        self.assertTrue(any("medium/high-risk review access_mode must be read_only" in item for item in errors))
 
     def test_report_cannot_overrule_review(self) -> None:
         docs = self.mutate()
