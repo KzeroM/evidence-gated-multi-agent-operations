@@ -16,7 +16,7 @@
     "valid_until": {"$ref": "common.schema.json#/$defs/date_time"},
     "subject": {"$ref": "common.schema.json#/$defs/subject"},
     "reviewer": {"$ref": "common.schema.json#/$defs/identity_ref"},
-    "review_execution_id": {"$ref": "common.schema.json#/$defs/execution_id"},
+    "review_execution_id": {"$ref": "common.schema.json#/$defs/execution_id", "description": "Reviewer execution identity; cross-document validation requires it to differ from the worker execution for medium/high risk."},
     "provenance": {"$ref": "common.schema.json#/$defs/review_provenance"},
     "verdict": {"enum": ["PASS", "REQUEST_CHANGES", "BLOCKED", "INCONCLUSIVE"]},
     "criteria": {

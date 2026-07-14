@@ -19,10 +19,10 @@ smoke_artifact() {
   "$venv/bin/python" -m pip install "$artifact"
   mkdir "$work"
   cd "$work"
-  "$venv/bin/egmo" --help >/dev/null
-  "$venv/bin/egmo" create-task packet --mission-id "package-smoke-$name"
-  "$venv/bin/egmo" validate packet/*.yaml --no-sanitization
-  "$venv/bin/egmo" judge \
+  PYTHONWARNINGS=error "$venv/bin/egmo" --help >/dev/null
+  PYTHONWARNINGS=error "$venv/bin/egmo" create-task packet --mission-id "package-smoke-$name"
+  PYTHONWARNINGS=error "$venv/bin/egmo" validate packet/*.yaml --no-sanitization
+  PYTHONWARNINGS=error "$venv/bin/egmo" judge \
     packet/mission.yaml packet/execution.yaml packet/evidence.yaml \
     packet/review.yaml packet/final-report.yaml
 }
@@ -30,4 +30,4 @@ smoke_artifact() {
 smoke_artifact "$tmp"/dist/*.whl wheel
 smoke_artifact "$tmp"/dist/*.tar.gz sdist
 
-echo "Built, clean-installed, and smoke-tested the wheel and sdist with bundled data."
+echo "Built, clean-installed, and smoke-tested the wheel and sdist with bundled schema data and deprecation warnings treated as errors."
