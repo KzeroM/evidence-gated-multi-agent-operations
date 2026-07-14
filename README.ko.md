@@ -51,7 +51,7 @@ flowchart LR
 | `BLOCKED` | 사용할 수 없는 권한, 의존성 또는 경계 접근이 필요함 |
 | `INCONCLUSIVE` | 사용 가능한 증거로 통과나 구체적 수정 판단을 내릴 수 없음 |
 
-실행 기록은 `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, `ROLLED_BACK`를 표현할 수 있습니다. 이는 프로토콜 사실이며 이 패키지는 작업을 전이하거나 예약하지 않습니다.
+실행 기록은 `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, `ROLLED_BACK`를 표현할 수 있습니다. 검증기는 순서가 지정된 허용 상태 전이, 재시도 계산, 취소/롤백 메타데이터 및 실행 상태·리뷰 판정·최종 판단의 일치를 검사합니다. 이는 프로토콜 사실이며 이 패키지는 작업을 전이하거나 예약하지 않습니다.
 
 ## 위험, 승인 및 독립성
 
@@ -104,11 +104,17 @@ flowchart TD
 python3 -m pip install -r requirements-dev.txt
 npm ci
 python3 -m compileall -q egmo scripts tests
-npm run validate
+egmo validate --mode working-tree
+egmo validate --mode tracked
+egmo validate --mode history
 npm test
+npm run scan:secrets
 npm run lint:markdown
 npm run lint:mermaid
+npm run smoke:package
 ```
+
+패키지 스모크 게이트는 sdist와 wheel을 모두 빌드하고 각각 격리된 환경에 새로 설치한 다음 소스 체크아웃 외부에서 설치된 `egmo`를 실행합니다.
 
 설정 가능한 [`sanitization-policy.yaml`](sanitization-policy.yaml)은 작업 트리, 추적 파일 또는 Git 이력의 문서, 스키마, 소스, 셸, JS/TS, TOML, INI, CSV 및 환경 변수 형태 텍스트를 검사합니다. 비밀 형태 할당, 비예시 이메일/주소, 비공개 POSIX/Windows 경로, 내부 호스트, 채팅 식별자, IPv4 및 IPv6를 탐지합니다. 결정적 스캐너는 심층 방어이며 CI는 고정된 표준 `detect-secrets` 스캐너도 실행합니다.
 

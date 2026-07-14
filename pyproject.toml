@@ -14,3 +14,8 @@ egmo = "egmo.cli:main"
 
 [tool.setuptools]
 packages = ["egmo"]
+
+[tool.setuptools.data-files]
+"share/egmo" = ["sanitization-policy.yaml"]
+"share/egmo/schemas" = ["schemas/*.json"]
+"share/egmo/templates" = ["templates/*.yaml"]

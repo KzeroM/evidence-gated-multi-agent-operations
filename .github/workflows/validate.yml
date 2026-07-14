@@ -51,6 +51,9 @@ jobs:
       - name: Run validator regression tests
         run: npm test
 
+      - name: Build, install, and smoke test package
+        run: npm run smoke:package
+
       - name: Run standard secret scanner
         run: npm run scan:secrets
 

@@ -83,6 +83,9 @@ state_history:
   - state: RUNNING
     at: "2026-07-14T10:10:00Z"
     actor_ref: "runtime:fictional-worker-v2"
+  - state: EVIDENCE_PENDING
+    at: "2026-07-14T10:39:00Z"
+    actor_ref: "runtime:fictional-worker-v2"
   - state: REVIEW_PENDING
     at: "2026-07-14T10:40:00Z"
     actor_ref: "service:fictional-controller"

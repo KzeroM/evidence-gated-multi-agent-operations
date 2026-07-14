@@ -27,7 +27,12 @@
           "description": {"$ref": "common.schema.json#/$defs/description"},
           "result": {"enum": ["pass", "fail", "indeterminate"]},
           "details": {"$ref": "common.schema.json#/$defs/evidence_details"}
-        }
+        },
+        "allOf": [
+          {"if": {"properties": {"evidence_type": {"enum": ["command_result", "test_result"]}}}, "then": {"properties": {"details": {"$ref": "common.schema.json#/$defs/command_evidence_details"}}}},
+          {"if": {"properties": {"evidence_type": {"const": "api_response"}}}, "then": {"properties": {"details": {"$ref": "common.schema.json#/$defs/api_evidence_details"}}}},
+          {"if": {"properties": {"evidence_type": {"enum": ["read_back", "artifact"]}}}, "then": {"properties": {"details": {"$ref": "common.schema.json#/$defs/artifact_evidence_details"}}}}
+        ]
       }
     },
     "known_limits": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/description"}, "maxItems": 50}

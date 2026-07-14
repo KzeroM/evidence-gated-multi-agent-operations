@@ -22,6 +22,7 @@ egmo validate --mode working-tree
 egmo validate --mode tracked
 egmo validate --mode history
 python3 -m unittest discover -s tests -v
+npm run smoke:package
 npm run scan:secrets
 npm run lint:markdown
 npm run lint:mermaid

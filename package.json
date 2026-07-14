@@ -4,7 +4,8 @@
     "test": "python3 -m unittest discover -s tests -v",
     "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#.venv\"",
     "lint:mermaid": "bash scripts/validate-mermaid.sh",
-    "scan:secrets": "bash scripts/validate-secrets.sh"
+    "scan:secrets": "bash scripts/validate-secrets.sh",
+    "smoke:package": "bash scripts/package-smoke.sh"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.16.0",

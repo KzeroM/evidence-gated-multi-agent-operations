@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 from .protocol import (
-    ROOT,
+    TEMPLATE_DIR,
     load_documents,
     sanitization_scan,
     validate_chain,
@@ -69,7 +69,11 @@ def _validate(args: argparse.Namespace) -> int:
 
 def _judge(args: argparse.Namespace) -> int:
     documents, errors = load_documents([path.resolve() for path in args.paths])
-    as_of = datetime.fromisoformat(args.as_of.replace("Z", "+00:00")) if args.as_of else None
+    as_of = None
+    if args.as_of:
+        as_of = datetime.fromisoformat(args.as_of.replace("Z", "+00:00"))
+        if as_of.tzinfo is None:
+            raise ValueError("--as-of must be an RFC3339 timestamp with a UTC offset")
     errors.extend(validate_chain(documents, as_of=as_of))
     kinds = {doc.data.get("document_type") for doc in documents}
     required = {"mission_contract", "execution_record", "evidence_record", "critic_review", "final_report"}
@@ -133,7 +137,7 @@ def _create_task(args: argparse.Namespace) -> int:
         return value
 
     for destination, source in mapping.items():
-        data = yaml.safe_load((ROOT / "templates" / source).read_text(encoding="utf-8"))
+        data = yaml.safe_load((TEMPLATE_DIR / source).read_text(encoding="utf-8"))
         data = replace_ids(data)
         (output / destination).write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
     print(f"Created protocol packet at {output}")

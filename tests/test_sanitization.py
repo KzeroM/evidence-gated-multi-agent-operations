@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from egmo.protocol import sanitization_findings
+from egmo.protocol import load_sanitization_policy, sanitization_findings
 
 
 class SanitizationTests(unittest.TestCase):
@@ -14,6 +14,10 @@ class SanitizationTests(unittest.TestCase):
     def test_allows_fictional_public_values(self) -> None:
         text = "reviewer" + "@" + "example.org 192.0.2.20 [2001:db8::20] token=<redacted>"
         self.assertEqual(self.findings(text), [])
+
+    def test_policy_covers_source_and_environment_shaped_text(self) -> None:
+        extensions = set(load_sanitization_policy()["extensions"])
+        self.assertTrue({".sh", ".js", ".ts", ".toml", ".ini", ".csv", ".env"} <= extensions)
 
     def test_rejects_non_example_email(self) -> None:
         text = "operator" + "@" + "corp" + ".invalid"

@@ -109,7 +109,7 @@ class SchemaDispatchTests(unittest.TestCase):
                 evidence = copy.deepcopy(document_of_type(template_chain(), "evidence_record").data)
                 item = evidence["items"][1]
                 item["evidence_type"] = evidence_type
-                self.assertEqual(validate_document(evidence), [])
+                self.assertTrue(validate_document(evidence))
                 errors = validate_document_semantics(LoadedDocument(evidence, evidence_type))
                 self.assertTrue(any("requires artifact/read-back details" in error for error in errors))
 
@@ -129,6 +129,14 @@ class EndToEndNegativeTests(unittest.TestCase):
         review = next(doc for doc in docs if doc.data["document_type"] == "critic_review")
         review.data["subject"]["value"] = "f" * 40
         self.assertTrue(any("review subject" in item for item in validate_chain(docs)))
+
+    def test_post_review_output_mutation_invalidates_pass(self) -> None:
+        docs = self.mutate()
+        execution = document_of_type(docs, "execution_record")
+        execution.data["output_subject"]["value"] = "f" * 40
+        errors = validate_chain(docs)
+        self.assertTrue(any("evidence subject does not match" in item for item in errors))
+        self.assertTrue(any("review subject does not match" in item for item in errors))
 
     def test_stale_evidence_invalidates_pass(self) -> None:
         docs = self.mutate()
@@ -161,7 +169,60 @@ class EndToEndNegativeTests(unittest.TestCase):
         review.data["verdict"] = "REQUEST_CHANGES"
         review.data["criteria"][0]["status"] = "not_satisfied"
         review.data["must_fix"] = ["Correct the fictional artifact."]
-        self.assertTrue(any("PASSED judgment requires PASS" in item for item in validate_chain(docs)))
+        self.assertTrue(any("conflicts with review verdict" in item for item in validate_chain(docs)))
+
+    def test_review_cannot_borrow_another_execution_evidence(self) -> None:
+        docs = self.mutate()
+        evidence = document_of_type(docs, "evidence_record")
+        evidence.data["execution_id"] = "other-execution"
+        errors = validate_chain(docs)
+        self.assertTrue(any("belongs to another chain or subject" in item for item in errors))
+
+    def test_review_cannot_precede_evidence_capture(self) -> None:
+        docs = self.mutate()
+        review = document_of_type(docs, "critic_review")
+        review.data["reviewed_at"] = "2026-07-14T09:20:00Z"
+        errors = validate_chain(docs)
+        self.assertTrue(any("captured after review" in item for item in errors))
+
+    def test_report_output_must_match_reviewed_subject(self) -> None:
+        docs = self.mutate()
+        report = document_of_type(docs, "final_report")
+        report.data["outputs"][0]["subject"]["value"] = "f" * 40
+        errors = validate_chain(docs)
+        self.assertTrue(any("output subject differs" in item for item in errors))
+
+    def test_invalid_state_transition_fails(self) -> None:
+        docs = self.mutate()
+        execution = document_of_type(docs, "execution_record")
+        execution.data["state_history"][1]["state"] = "PASSED"
+        errors = validate_chain(docs)
+        self.assertTrue(any("invalid state transition DRAFT -> PASSED" in item for item in errors))
+
+    def test_cancelled_state_requires_cancellation_metadata(self) -> None:
+        execution = copy.deepcopy(document_of_type(template_chain(), "execution_record").data)
+        execution["current_state"] = "CANCELLED"
+        execution["state_history"][-1]["state"] = "CANCELLED"
+        errors = validate_document_semantics(LoadedDocument(execution, "cancelled"))
+        self.assertTrue(any("requires cancellation metadata" in item for item in errors))
+
+    def test_verdict_semantics_are_enforced(self) -> None:
+        review = copy.deepcopy(document_of_type(template_chain(), "critic_review").data)
+        review["verdict"] = "INCONCLUSIVE"
+        errors = validate_document_semantics(LoadedDocument(review, "inconclusive"))
+        self.assertTrue(any("requires an insufficient_evidence criterion" in item for item in errors))
+
+    def test_inconclusive_chain_is_coherent_but_not_passed(self) -> None:
+        docs = self.mutate()
+        execution = document_of_type(docs, "execution_record")
+        review = document_of_type(docs, "critic_review")
+        report = document_of_type(docs, "final_report")
+        execution.data["current_state"] = "EVIDENCE_PENDING"
+        execution.data["state_history"][-1]["state"] = "EVIDENCE_PENDING"
+        review.data["verdict"] = "INCONCLUSIVE"
+        review.data["criteria"][0]["status"] = "insufficient_evidence"
+        report.data["judgment"] = "INCONCLUSIVE"
+        self.assertEqual(validate_chain(docs), [])
 
     def test_review_worker_execution_reference_must_match(self) -> None:
         docs = self.mutate()
@@ -207,6 +268,14 @@ class CliTests(unittest.TestCase):
     def test_judge_usage_error_is_two(self) -> None:
         result = self.run_cli("judge")
         self.assertEqual(result.returncode, 2)
+
+    def test_judge_rejects_timezone_less_as_of_without_traceback(self) -> None:
+        result = self.run_cli(
+            "judge", *(str(path) for path in TEMPLATE_PATHS), "--as-of", "2026-07-14T12:00:00"
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("UTC offset", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_create_task_is_non_executing_scaffold(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

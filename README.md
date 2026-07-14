@@ -51,7 +51,7 @@ Stable IDs are references, not copied prose: `mission_id`, `criterion_id`, `exec
 | `BLOCKED` | Progress requires unavailable authority, dependency, or boundary access |
 | `INCONCLUSIVE` | Available evidence cannot support either pass or a specific correction |
 
-Execution records can represent `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, and `ROLLED_BACK`. These are protocol facts only; this package does not transition or schedule work.
+Execution records can represent `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, and `ROLLED_BACK`. The validator checks ordered, allowed state transitions, retry accounting, cancellation/rollback metadata, and agreement among execution state, review verdict, and final judgment. These are protocol facts only; this package does not transition or schedule work.
 
 ## Risk, approval, and independence
 
@@ -108,11 +108,17 @@ Ready-to-copy documents are in [`templates/`](templates/). A complete Markdown c
 python3 -m pip install -r requirements-dev.txt
 npm ci
 python3 -m compileall -q egmo scripts tests
-npm run validate
+egmo validate --mode working-tree
+egmo validate --mode tracked
+egmo validate --mode history
 npm test
+npm run scan:secrets
 npm run lint:markdown
 npm run lint:mermaid
+npm run smoke:package
 ```
+
+The package smoke gate builds both the sdist and wheel, clean-installs each into an isolated environment, and exercises the installed `egmo` from outside the source checkout.
 
 The configurable [`sanitization-policy.yaml`](sanitization-policy.yaml) scans working-tree, tracked, or Git-history content across documentation, schemas, source, shell, JS/TS, TOML, INI, CSV, and environment-shaped text. It detects secret-shaped assignments, non-example emails and addresses, private POSIX/Windows paths, internal hostnames, chat identifiers, IPv4, and IPv6. This deterministic scanner is defense in depth; CI additionally runs the pinned standard `detect-secrets` scanner.
 

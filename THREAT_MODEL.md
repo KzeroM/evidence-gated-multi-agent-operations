@@ -11,7 +11,7 @@ Assets include mission/approval contracts, stable criteria, execution history, e
 | Human intent to mission | Ambiguous scope or fabricated approval | Explicit objective, non-goals, capabilities, risk, approver, scope, time, and expiry where required |
 | Untrusted input to remotely managed worker | Prompt injection or malicious tool/package output | Treat content as data; grant only declared filesystem/network/mutation capabilities |
 | Worker to evidence store | Misleading output, lost failure, or self-certification | Typed result, exit status/timing/environment, immutable artifact digest, failure classification |
-| Evidence to reviewer | Tampering or stale proof | Exact subject equality, SHA/version binding, evidence expiry, read-back where appropriate |
+| Evidence to reviewer | Tampering, stale proof, or evidence borrowed from another execution | Exact mission/execution/subject references, SHA/version binding, capture ordering, evidence expiry, read-back where appropriate |
 | Worker to reviewer | Shared assumptions or rubber stamp | Reviewer identity/runtime/model, separate execution, context scope/sources, access mode, conflicts |
 | Remote to trusted/privileged executor | Boundary confusion or excess authority | Scoped approval, idempotency/timeout/stop conditions, typed returned evidence, rollback reference |
 | Reviewed artifact to final report | Post-review mutation or overruled verdict | Subject equality, review validity, evidence freshness, criterion/evidence ID references |
