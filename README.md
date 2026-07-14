@@ -78,11 +78,13 @@ python3 -m pip install -e .
 egmo validate
 egmo validate --mode tracked
 egmo validate --mode history
-egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml --as-of 2026-07-15T00:00:00Z
+egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml
 egmo create-task ./task-packet --mission-id example-mission-0002
 ```
 
 Exit codes are deterministic: `0` means validation passed or the chain judgment is `PASSED`; `1` means validation/judgment did not pass; `2` means usage, input, or operational error. `create-task` copies protocol documents only and performs no execution.
+
+By default, `judge` checks freshness at the review's embedded `reviewed_at` timestamp for deterministic replay. Operational callers should pass an explicit current RFC 3339 `--as-of` value. CI intentionally uses the embedded timestamp so template freshness dates remain self-contained and cannot drift apart from a separately hardcoded smoke-test date.
 
 ## Evidence flow
 

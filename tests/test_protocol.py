@@ -12,7 +12,14 @@ from pathlib import Path
 
 import yaml
 
-from egmo.protocol import ROOT, LoadedDocument, load_documents, validate_chain, validate_document
+from egmo.protocol import (
+    ROOT,
+    LoadedDocument,
+    load_documents,
+    validate_chain,
+    validate_document,
+    validate_document_semantics,
+)
 
 
 TEMPLATE_PATHS = [
@@ -36,6 +43,10 @@ def template_chain() -> list[LoadedDocument]:
 
 def document_of_type(documents: list[LoadedDocument], document_type: str) -> LoadedDocument:
     return next(doc for doc in documents if doc.data["document_type"] == document_type)
+
+
+def mutable_template_chain() -> list[LoadedDocument]:
+    return [LoadedDocument(copy.deepcopy(doc.data), doc.label) for doc in template_chain()]
 
 
 class SchemaDispatchTests(unittest.TestCase):
@@ -67,10 +78,45 @@ class SchemaDispatchTests(unittest.TestCase):
         mission["target_subject"]["value"] = "f" * 64
         self.assertTrue(any("not valid for subject kind" in item for item in validate_document(mission)))
 
+    def test_api_response_without_status_code_validates(self) -> None:
+        evidence = copy.deepcopy(document_of_type(template_chain(), "evidence_record").data)
+        item = evidence["items"][0]
+        item["evidence_type"] = "api_response"
+        item["details"] = {
+            "source_uri": "https://example.org/api/results/example-request",
+            "artifact": {
+                "uri": "https://example.org/artifacts/example-api-response.json",
+                "digest": f"sha256:{'d' * 64}",
+            },
+        }
+        self.assertEqual(validate_document(evidence), [])
+        self.assertEqual(validate_document_semantics(LoadedDocument(evidence, "api-response")), [])
+
+    def test_artifact_and_read_back_details_validate(self) -> None:
+        for evidence_type in ("artifact", "read_back"):
+            with self.subTest(evidence_type=evidence_type):
+                evidence = copy.deepcopy(document_of_type(template_chain(), "evidence_record").data)
+                item = evidence["items"][0]
+                item["evidence_type"] = evidence_type
+                self.assertEqual(validate_document(evidence), [])
+                self.assertEqual(
+                    validate_document_semantics(LoadedDocument(evidence, evidence_type)), []
+                )
+
+    def test_artifact_and_read_back_reject_command_details(self) -> None:
+        for evidence_type in ("artifact", "read_back"):
+            with self.subTest(evidence_type=evidence_type):
+                evidence = copy.deepcopy(document_of_type(template_chain(), "evidence_record").data)
+                item = evidence["items"][1]
+                item["evidence_type"] = evidence_type
+                self.assertEqual(validate_document(evidence), [])
+                errors = validate_document_semantics(LoadedDocument(evidence, evidence_type))
+                self.assertTrue(any("requires artifact/read-back details" in error for error in errors))
+
 
 class EndToEndNegativeTests(unittest.TestCase):
     def mutate(self) -> list[LoadedDocument]:
-        return [LoadedDocument(copy.deepcopy(doc.data), doc.label) for doc in template_chain()]
+        return mutable_template_chain()
 
     def test_unknown_criterion_reference_fails(self) -> None:
         docs = self.mutate()
@@ -117,6 +163,20 @@ class EndToEndNegativeTests(unittest.TestCase):
         review.data["must_fix"] = ["Correct the fictional artifact."]
         self.assertTrue(any("PASSED judgment requires PASS" in item for item in validate_chain(docs)))
 
+    def test_review_worker_execution_reference_must_match(self) -> None:
+        docs = self.mutate()
+        review = next(doc for doc in docs if doc.data["document_type"] == "critic_review")
+        review.data["provenance"]["worker_execution_ref"] = "different-worker-run"
+        errors = validate_chain(docs)
+        self.assertTrue(any("worker_execution_ref does not match" in item for item in errors))
+
+    def test_pass_review_with_unknown_criterion_fails_without_exception(self) -> None:
+        docs = self.mutate()
+        review = next(doc for doc in docs if doc.data["document_type"] == "critic_review")
+        review.data["criteria"][0]["criterion_id"] = "unknown-criterion"
+        errors = validate_chain(docs)
+        self.assertTrue(any("unknown criterion_id unknown-criterion" in item for item in errors))
+
 
 class CliTests(unittest.TestCase):
     def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
@@ -125,9 +185,24 @@ class CliTests(unittest.TestCase):
         )
 
     def test_judge_passes_complete_template_chain(self) -> None:
-        result = self.run_cli("judge", *(str(path) for path in TEMPLATE_PATHS), "--as-of", "2026-07-15T00:00:00Z")
+        result = self.run_cli("judge", *(str(path) for path in TEMPLATE_PATHS))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("PASSED", result.stdout)
+
+    def test_unknown_review_criterion_exits_one_without_traceback(self) -> None:
+        docs = mutable_template_chain()
+        review = next(doc for doc in docs if doc.data["document_type"] == "critic_review")
+        review.data["criteria"][0]["criterion_id"] = "unknown-criterion"
+        with tempfile.TemporaryDirectory() as directory:
+            paths = []
+            for index, doc in enumerate(docs):
+                path = Path(directory) / f"{index}-{doc.data['document_type']}.yaml"
+                path.write_text(yaml.safe_dump(doc.data, sort_keys=False), encoding="utf-8")
+                paths.append(str(path))
+            result = self.run_cli("judge", *paths)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("unknown criterion_id unknown-criterion", result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
 
     def test_judge_usage_error_is_two(self) -> None:
         result = self.run_cli("judge")

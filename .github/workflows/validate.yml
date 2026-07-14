@@ -60,8 +60,8 @@ jobs:
       - name: Validate Mermaid diagrams
         run: npm run lint:mermaid
 
-      - name: Smoke test CLI judgment
+      # Omitting --as-of replays freshness at reviewed_at, so template dates remain self-contained.
+      - name: Smoke test CLI judgment at embedded review time
         run: >-
           egmo judge templates/mission.yaml templates/execution-record.yaml
           templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml
-          --as-of 2026-07-15T00:00:00Z

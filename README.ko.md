@@ -74,11 +74,13 @@ python3 -m pip install -e .
 egmo validate
 egmo validate --mode tracked
 egmo validate --mode history
-egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml --as-of 2026-07-15T00:00:00Z
+egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml
 egmo create-task ./task-packet --mission-id example-mission-0002
 ```
 
 종료 코드는 결정적입니다. `0`은 검증 통과 또는 `PASSED`, `1`은 검증/판단 미통과, `2`는 사용법·입력·운영 오류입니다. `create-task`는 프로토콜 문서만 복사하고 실행하지 않습니다.
+
+기본적으로 `judge`는 결정적 재현을 위해 리뷰에 기록된 `reviewed_at` 시점에서 최신성을 검사합니다. 운영 환경에서는 현재 시각을 명시적인 RFC 3339 `--as-of` 값으로 전달해야 합니다. CI는 템플릿의 최신성 날짜와 별도로 하드코딩된 검사 날짜가 어긋나지 않도록 기록된 시점을 사용합니다.
 
 ## 증거 흐름
 

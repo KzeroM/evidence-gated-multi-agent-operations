@@ -217,13 +217,16 @@ def validate_document_semantics(document: LoadedDocument) -> list[str]:
                 errors.append(f"{label}: {item['evidence_id']} subject differs from record subject")
             details = item.get("details", {})
             evidence_type = item.get("evidence_type")
-            is_command = "command" in details
-            is_api = "status_code" in details
+            is_command = {
+                "command", "exit_status", "started_at", "ended_at", "environment_ref", "output_artifact"
+            }.issubset(details)
+            is_api = {"source_uri", "artifact"}.issubset(details)
+            is_artifact = {"artifact", "media_type"}.issubset(details)
             if evidence_type in {"command_result", "test_result"} and not is_command:
                 errors.append(f"{label}: {item['evidence_id']} requires command result details")
             if evidence_type == "api_response" and not is_api:
                 errors.append(f"{label}: {item['evidence_id']} requires API response details")
-            if evidence_type in {"read_back", "artifact"} and (is_command or is_api):
+            if evidence_type in {"read_back", "artifact"} and not is_artifact:
                 errors.append(f"{label}: {item['evidence_id']} requires artifact/read-back details")
             if is_command and _parse_time(details["ended_at"]) < _parse_time(details["started_at"]):
                 errors.append(f"{label}: {item['evidence_id']} command ended before it started")
@@ -328,17 +331,25 @@ def validate_chain(documents: Iterable[LoadedDocument], as_of: datetime | None =
         mission_criteria = {item["criterion_id"]: item for item in mission.data["success_criteria"]}
         if data["verdict"] == "PASS":
             for assessment in data["criteria"]:
+                mission_criterion = mission_criteria.get(assessment["criterion_id"])
+                if mission_criterion is None:
+                    continue
                 provided = []
                 for evidence_id in assessment["evidence_ids"]:
                     pair = evidence_items.get(evidence_id)
                     if pair:
                         provided.append(pair[1])
-                required_types = set(mission_criteria[assessment["criterion_id"]]["required_evidence_types"])
+                required_types = set(mission_criterion["required_evidence_types"])
                 provided_types = {item["evidence_type"] for item in provided if item["result"] == "pass"}
                 if not required_types.issubset(provided_types):
                     errors.append(f"{review.label}: {assessment['criterion_id']} lacks passing required evidence types {sorted(required_types - provided_types)}")
         risk = mission.data["risk"]
         provenance = data["provenance"]
+        if provenance["worker_execution_ref"] != execution.data["worker_execution_id"]:
+            errors.append(
+                f"{review.label}: provenance worker_execution_ref does not match "
+                "reviewed worker execution"
+            )
         if risk["level"] == "high":
             if provenance["runtime_ref"] == execution.data["worker_runtime_ref"]:
                 errors.append(f"{review.label}: high-risk review runtime must differ from worker runtime")
