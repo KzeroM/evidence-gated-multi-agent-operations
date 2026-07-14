@@ -28,7 +28,7 @@ VPS-first is one deployment profile for the remotely managed boundary. The same 
 | Copied criterion prose | Evidence silently changes the meaning of a criterion | Reference stable `criterion_id` values defined by the mission |
 | Artifact tampering | File or deployment changes after evidence capture | Bind every stage to a typed digest/version; mutation creates a new subject and invalidates prior pass |
 | Stale proof | Old evidence is reused after dependencies or state change | Enforce `expires_at` and `valid_until` at judgment time |
-| Reviewer non-independence | The worker reviews its own consequential result | Medium/high risk requires separate runtime and execution plus read-only review; low risk may use policy-based/logical separation and all levels disclose provenance |
+| Reviewer non-independence | The worker reviews its own consequential result | Medium/high risk requires separate runtime and execution plus `read_only: true`; live `read_only` and immutable `offline_packet` access are allowed, `read_write` is rejected; low risk may use policy-based/logical separation and all levels disclose provenance |
 | Approval laundering | A broad or expired approval is reused | Medium requires explicit approval; high/production requires scoped expiring approval and rollback/compensation |
 | Over-broad side effects | Prose authorization is interpreted expansively | Machine-checkable filesystem globs, network domains, and mutation flags |
 | Partial success hidden | Some changes occur before failure | State, retry budget, failure classification, cancellation, and rollback/compensation records |

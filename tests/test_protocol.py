@@ -6,15 +6,18 @@ import copy
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from datetime import datetime
 from pathlib import Path
 
 import yaml
 
+from egmo import __version__
 from egmo.protocol import (
     ROOT,
     LoadedDocument,
+    _schema_registry,
     load_documents,
     validate_chain,
     validate_document,
@@ -54,16 +57,36 @@ class SchemaDispatchTests(unittest.TestCase):
         result = subprocess.run(
             [
                 sys.executable,
-                "-W", "error",
                 "-c",
-                "from egmo.protocol import validate_document; "
-                "assert validate_document({'schema_version': '2.0'})",
+                "import warnings; "
+                "warnings.filterwarnings('error', message=r'.*RefResolver.*', "
+                "category=DeprecationWarning); "
+                "import yaml; "
+                "from egmo.protocol import TEMPLATE_DIR, _schema_registry, validate_document; "
+                "_schema_registry.cache_clear(); "
+                "document = yaml.safe_load((TEMPLATE_DIR / 'critic-review.yaml').read_text()); "
+                "assert validate_document(document, 'complete-critic-template') == []; "
+                "assert _schema_registry.cache_info().misses == 1",
             ],
             cwd=ROOT,
             text=True,
             capture_output=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_schema_registry_is_cached_after_ref_resolution(self) -> None:
+        _schema_registry.cache_clear()
+        first = _schema_registry()
+        review = copy.deepcopy(document_of_type(template_chain(), "critic_review").data)
+        self.assertEqual(validate_document(review), [])
+        second = _schema_registry()
+        self.assertIs(first, second)
+        self.assertEqual(_schema_registry.cache_info().misses, 1)
+
+    def test_implementation_version_matches_package_metadata(self) -> None:
+        metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        self.assertEqual(__version__, "2.1.0")
+        self.assertEqual(metadata["project"]["version"], __version__)
 
     def test_every_supported_template_validates(self) -> None:
         docs = template_chain()
@@ -196,7 +219,60 @@ class EndToEndNegativeTests(unittest.TestCase):
         self.assertTrue(any("medium/high-risk review runtime must differ" in item for item in errors))
         self.assertTrue(any("medium/high-risk review execution must differ" in item for item in errors))
         self.assertTrue(any("medium/high-risk reviewer must be read-only" in item for item in errors))
-        self.assertTrue(any("medium/high-risk review access_mode must be read_only" in item for item in errors))
+        self.assertTrue(any(
+            "medium/high-risk review access_mode must be read_only or offline_packet" in item
+            for item in errors
+        ))
+
+    def test_medium_and_high_risk_allow_read_only_offline_packets(self) -> None:
+        for risk_level in ("medium", "high"):
+            with self.subTest(risk_level=risk_level):
+                docs = self.mutate()
+                mission = document_of_type(docs, "mission_contract")
+                review = document_of_type(docs, "critic_review")
+                mission.data["risk"]["level"] = risk_level
+                if risk_level == "high":
+                    mission.data["risk"]["production"] = True
+                    mission.data["approval"]["expires_at"] = "2026-07-20T09:05:00Z"
+                    mission.data["rollback_or_compensation_plan"] = (
+                        "file://plans/example-rollback.md"
+                    )
+                review.data["provenance"]["access_mode"] = "offline_packet"
+                review.data["provenance"]["read_only"] = True
+                self.assertEqual(validate_chain(docs), [])
+
+    def test_medium_and_high_risk_reject_write_access(self) -> None:
+        for risk_level in ("medium", "high"):
+            with self.subTest(risk_level=risk_level):
+                docs = self.mutate()
+                mission = document_of_type(docs, "mission_contract")
+                review = document_of_type(docs, "critic_review")
+                mission.data["risk"]["level"] = risk_level
+                if risk_level == "high":
+                    mission.data["risk"]["production"] = True
+                    mission.data["approval"]["expires_at"] = "2026-07-20T09:05:00Z"
+                    mission.data["rollback_or_compensation_plan"] = (
+                        "file://plans/example-rollback.md"
+                    )
+                review.data["provenance"]["access_mode"] = "read_write"
+                review.data["provenance"]["read_only"] = False
+                errors = validate_chain(docs)
+                self.assertTrue(any(
+                    "medium/high-risk reviewer must be read-only" in item for item in errors
+                ))
+                self.assertTrue(any(
+                    "medium/high-risk review access_mode" in item for item in errors
+                ))
+
+    def test_offline_packet_without_read_only_status_is_rejected(self) -> None:
+        docs = self.mutate()
+        review = document_of_type(docs, "critic_review")
+        review.data["provenance"]["access_mode"] = "offline_packet"
+        review.data["provenance"]["read_only"] = False
+        errors = validate_chain(docs)
+        self.assertTrue(any(
+            "medium/high-risk reviewer must be read-only" in item for item in errors
+        ))
 
     def test_report_cannot_overrule_review(self) -> None:
         docs = self.mutate()
