@@ -2,20 +2,19 @@
 
 ## Scope
 
-This repository is a public reference package. Its supported release is the latest commit on the default branch. It should contain only reusable guidance, fictional examples, deterministic validation, and public-safe metadata.
+This public repository contains a reference protocol, schemas, examples, and deterministic validation. It does not enforce runtime capabilities, authenticate provenance identities, execute agents, or operate deployments. The supported version is the latest default-branch commit.
 
-## Reporting a vulnerability
+## Reporting
 
-Use the repository's private vulnerability-reporting feature when it is available. If it is unavailable, open a minimal public issue that requests a private maintainer contact without including sensitive details.
+Use private vulnerability reporting when available. If it is unavailable, open a minimal public issue requesting a private maintainer channel without sensitive details. Never include credentials, personal/private identifiers, private repository names, paths, hosts, chat IDs, topology, or evidence artifacts in a public report.
 
-Never put credentials, private operational details, personal data, private repository identifiers, internal hostnames, chat identifiers, or non-public evidence in a public issue.
+## Sensitive material response
 
-## If sensitive material is found
-
-1. Stop distributing the affected copy.
-2. Preserve only the minimum evidence needed for a private investigation.
-3. Remove the material from the current tree and assess whether history is affected.
+1. Stop distributing the affected copy and avoid copying the value into issues or logs.
+2. Preserve only minimal private investigation evidence.
+3. Remove the material from the working tree and assess all reachable Git blobs.
 4. Rotate any exposed credential through its owning system.
-5. Re-run the repository validation and perform an independent public-safety review before publishing again.
+5. Re-run deterministic sanitization in working-tree, tracked, and history modes plus `detect-secrets`.
+6. Bind an independent public-safety review to the repaired commit before publication.
 
-The validation scripts are defense in depth. A passing scan cannot prove that every sensitive value has been omitted.
+The scanners are defense in depth. A clean scan cannot prove that all sensitive material has been omitted, and schema validity cannot prove evidence truth.

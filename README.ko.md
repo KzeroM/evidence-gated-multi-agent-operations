@@ -1,399 +1,129 @@
-# Evidence-Gated Multi-Agent Operations
+# 증거 게이트 기반 멀티 에이전트 운영
 
 [English](README.md) / [한국어](README.ko.md)
 
-이 참조 아키텍처는 **의도 번역, 오케스트레이션, 실행, 비평, 출력물 소유권, 완료 판단을 서로 분리해** 팀이 복잡한 AI 지원 작업을 수행하도록 돕습니다.
+이 저장소는 AI 지원 운영을 위한 공급업체 중립적인 증거 게이트 참조 프로토콜입니다. 에이전트 런타임, 스케줄러, 큐, 배포 서비스 또는 오케스트레이션 엔진이 아닙니다.
 
-하나의 규칙을 중심으로 구성됩니다.
+핵심 원칙은 단순합니다. 완료 주장은 증거가 아닙니다. 미션, 실행, 증거, 독립 리뷰 및 최종 판단을 동일한 불변 대상에 연결하고 증거가 최신인 동안에만 결과를 수용합니다.
 
-> **에이전트가 완료했다고 주장하는 것만으로는 증거로 간주하지 마세요. 증거를 요구하고, 출력물을 목적에 맞게 배치하며, 명시적인 성공 기준에 따라 결과를 판단하세요.**
+## 신뢰 모델
 
-## 개요
+일반 아키텍처에는 두 경계가 있습니다.
 
-이 참조 아키텍처는 LLM 작업자와 오케스트레이션 서비스가 원격 VPS에서 실행된다고 가정합니다.
-VPS는 주된 원격 실행 경계로서 원격 모델 실행, 오케스트레이션, 공개 정보 및 네트워크 탐색, 자동화, 증거 수집, 지속성 있는 작업 상태 관리를 담당합니다.
-사용자의 로컬 머신은 별도의 선택적 실행 경계이며, 로컬 파일, GUI, 장치·세션 상태, 시크릿 또는 VPS에서 안전하게 수행할 수 없는 권한 작업이 필요할 때만 사용합니다.
-두 경계를 넘나드는 모든 작업에는 범위가 명시된 인수인계와 VPS 측 워크플로로 반환되는 증거가 필요하며, 전송 계층이 요청을 수락했다는 사실만으로는 완료가 입증되지 않습니다.
-이는 아키텍처 차원의 운영 가정일 뿐, 모든 역할에 별도의 물리 서버나 프로세스가 필요하다는 뜻도 아니고 호스팅 서비스를 제공하겠다는 약속도 아닙니다.
+- **신뢰할 수 없거나 원격 관리되는 실행 경계**에는 작업자, 공개 네트워크 접근 및 조정 기능이 있을 수 있습니다. 여기서 나온 출력은 주장으로 취급합니다.
+- **신뢰되거나 권한이 있는 경계**에는 비공개 파일, 자격 증명, 사용자 세션, 배포 권한 또는 프로덕션 리소스가 있을 수 있습니다. 경계를 넘을 때는 범위가 지정된 승인과 반환 증거가 필요합니다.
 
-## 저장소 구성
+VPS는 첫 번째 경계의 유용한 배포 프로필일 뿐 프로토콜 요구 사항은 아닙니다. 선언된 기능과 리뷰 분리를 보존하면 어떤 공급업체, 호스트 또는 사람 프로세스에서도 역할을 수행할 수 있습니다.
 
-```text
-README.md                         # 기본 공개 참조 문서
-README.ko.md                      # 한국어 번역
-THREAT_MODEL.md                   # 공개 위협 모델 및 독립성 기준
-SECURITY.md                       # 안전한 취약점 보고 지침
-CONTRIBUTING.md                   # 공개에 안전한 기여 및 검증 가이드
-CODE_OF_CONDUCT.md                # 커뮤니티 기대 사항 및 집행
-LICENSE                           # Creative Commons Attribution 4.0 International
-diagrams/                         # 독립 실행형 Mermaid 다이어그램
-examples/                         # 재사용 가능한 미션 및 보고서 템플릿과 사례 연구
-templates/                        # 바로 복사해 쓸 수 있는 미션, 증거, 리뷰, 인수인계 파일
-schemas/                          # 계약, 증거, 리뷰, 보고서용 JSON Schemas
-scripts/                          # 저장소 검증 스크립트
-tests/                            # 정화 및 검증 회귀 테스트
-.github/workflows/                # 문서, 스키마, 다이어그램, 링크, 민감 정보에 대한 CI 검증
+```mermaid
+flowchart LR
+    A[신뢰할 수 없는 입력] --> B[원격 관리 작업자 경계]
+    B --> C[증거 패킷]
+    C --> D[독립 읽기 전용 리뷰]
+    D --> E{증거 판단}
+    E -->|범위 지정 인수인계| F[신뢰 또는 권한 경계]
+    F --> C
+    E -->|최신 PASS| G[최종 보고서]
 ```
 
-## 빠른 시작
+## 프로토콜 v2
 
-검증 의존성을 설치하고 CI에서 사용하는 것과 같은 검사를 실행합니다.
+기계 검사 가능한 모든 YAML 문서는 `document_type`과 `schema_version: "2.0"`을 선언합니다.
+
+| 문서 | 목적 |
+| --- | --- |
+| `mission_contract` | 목표, 안정적인 기준 ID, 기능, 불변 대상, 위험 및 승인 |
+| `execution_record` | 프로토콜 상태, 작업자 출처, 재시도/시간 제한/멱등성, 실패, 취소 및 롤백 참조 |
+| `evidence_record` | 기준 ID, 실행, 불변 대상 및 유효 기간에 연결된 형식화 증거 |
+| `critic_review` | 독립 출처, 기준 판단, 판정, 발견, 필수 수정 및 수용된 연기 |
+| `final_report` | 판단, 검증된 ID, 불변 대상, 출력, 잔여 위험 및 후속 작업 |
+
+엄격한 Draft 2020-12 스키마는 [`schemas/`](schemas/)에 있습니다. JSON Schema로 표현할 수 없는 문서 간 규칙은 `egmo validate`와 `egmo judge`가 검사합니다.
+
+`mission_id`, `criterion_id`, `execution_id`, `evidence_id`, `review_id`는 복사된 문장이 아니라 안정적인 참조입니다. 불변 대상은 Git 커밋, SHA-256 파일/OCI 다이제스트 및 형식화된 배포/리소스 리비전을 지원합니다. 변경하면 새 대상이 되며 이전 `PASS`는 승계되지 않습니다. 증거에는 수집/만료 시각이, 리뷰에는 리뷰/유효 종료 시각이 있습니다.
+
+## 판정 및 상태 의미
+
+| 리뷰 판정 | 의미 |
+| --- | --- |
+| `PASS` | 모든 적용 기준이 정확한 대상의 참조된 최신 증거로 충족되고 필수 수정이 없음 |
+| `REQUEST_CHANGES` | 대상을 수정할 수 있으며 하나 이상의 필수 수정이 기록됨 |
+| `BLOCKED` | 사용할 수 없는 권한, 의존성 또는 경계 접근이 필요함 |
+| `INCONCLUSIVE` | 사용 가능한 증거로 통과나 구체적 수정 판단을 내릴 수 없음 |
+
+실행 기록은 `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, `ROLLED_BACK`를 표현할 수 있습니다. 이는 프로토콜 사실이며 이 패키지는 작업을 전이하거나 예약하지 않습니다.
+
+## 위험, 승인 및 독립성
+
+- 낮은 위험은 명명된 정책 승인을 사용할 수 있습니다.
+- 중간 위험은 실행 전에 명시적인 계약 승인이 필요합니다.
+- 높은 위험 또는 프로덕션 작업은 만료되는 범위 지정 승인과 롤백/보상 계획이 필요합니다.
+- 프로덕션은 항상 높은 위험으로 분류합니다.
+- 높은 위험에서는 작업자와 다른 리뷰어 런타임/실행 및 읽기 전용 접근이 필수입니다.
+
+리뷰 출처에는 리뷰어 신원, 런타임/모델, 분리된 실행 참조, 컨텍스트 출처/범위, 접근 모드, 충돌 및 읽기 전용 상태가 포함됩니다. 허용 부작용은 파일 읽기/쓰기 glob, 네트워크 도메인, 배포, 데이터베이스 변경 및 메시징 플래그로 표현합니다. 실제 강제는 주변 환경의 책임이며 프로토콜은 권한을 검사 가능하게 만듭니다.
+
+## 형식화 증거
+
+증거 형식은 `command_result`, `test_result`, `read_back`, `api_response`, `artifact`입니다. 명령/테스트에는 명령, 종료 상태, RFC 3339 시작/종료 시각, 환경 참조 및 불변 출력 아티팩트가 포함됩니다. API, 읽기 및 아티팩트 기록에는 URI와 다이제스트가 포함됩니다. 설명은 관련성을 보완하지만 형식화 필드를 대신하지 않습니다.
+
+## CLI
+
+```bash
+python3 -m pip install -e .
+egmo validate
+egmo validate --mode tracked
+egmo validate --mode history
+egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml --as-of 2026-07-15T00:00:00Z
+egmo create-task ./task-packet --mission-id example-mission-0002
+```
+
+종료 코드는 결정적입니다. `0`은 검증 통과 또는 `PASSED`, `1`은 검증/판단 미통과, `2`는 사용법·입력·운영 오류입니다. `create-task`는 프로토콜 문서만 복사하고 실행하지 않습니다.
+
+## 증거 흐름
+
+```mermaid
+flowchart TD
+    A[사람의 의도] --> B[미션 계약 및 승인]
+    B --> C[실행 기록]
+    C --> D[대상에 연결된 형식화 증거]
+    D --> E[독립 비평 리뷰]
+    E --> F{기준 및 최신성 판단}
+    F -->|PASS| G[최종 보고서]
+    F -->|REQUEST_CHANGES| C
+    F -->|BLOCKED 또는 INCONCLUSIVE| H[증거와 함께 상향 보고]
+```
+
+복사 가능한 문서는 [`templates/`](templates/)에 있습니다. 완전한 Markdown 체인은 [`examples/protocol-chain.md`](examples/protocol-chain.md)에, 실패 중심 예시는 [`examples/failure-cases.md`](examples/failure-cases.md)에, 적합한 연기와 판단 사례는 [`examples/case-study-001/`](examples/case-study-001/)에 있습니다.
+
+## 검증 및 공개 안전
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
 npm ci
+python3 -m compileall -q egmo scripts tests
 npm run validate
 npm test
 npm run lint:markdown
 npm run lint:mermaid
 ```
 
-독립 실행형 템플릿을 복사하여 새로운 증거 게이트 작업을 시작합니다.
+설정 가능한 [`sanitization-policy.yaml`](sanitization-policy.yaml)은 작업 트리, 추적 파일 또는 Git 이력의 문서, 스키마, 소스, 셸, JS/TS, TOML, INI, CSV 및 환경 변수 형태 텍스트를 검사합니다. 비밀 형태 할당, 비예시 이메일/주소, 비공개 POSIX/Windows 경로, 내부 호스트, 채팅 식별자, IPv4 및 IPv6를 탐지합니다. 결정적 스캐너는 심층 방어이며 CI는 고정된 표준 `detect-secrets` 스캐너도 실행합니다.
 
-```bash
-cp templates/mission.yaml mission.yaml
-cp templates/evidence.yaml evidence.yaml
-cp templates/critic-review.yaml critic-review.yaml
-```
+Mermaid 검증은 독립 및 인라인 다이어그램에 실제 Mermaid CLI 렌더러를 사용하며 손상된 다이어그램 거부를 회귀 테스트합니다. 링크와 모든 YAML 예시도 검증합니다.
 
-작업이 로컬 또는 권한 있는 경계로 넘어가야 할 때에만 [`templates/local-handoff.md`](templates/local-handoff.md)를 사용하세요. 스키마가 뒷받침하는 최종 보고서 템플릿은 [`examples/final-report-template.md`](examples/final-report-template.md)에 있습니다.
+## v1에서 마이그레이션
 
----
+v2는 의도적인 호환 중단입니다. 형태 기반 Markdown 분기, 기준 문장 복사, 자유 형식 부작용/증거, 버전 없는 리뷰 및 `PASS_WITH_DEFERRALS`는 허용되지 않습니다. 문서 종류/버전을 추가하고, 안정적 ID를 배정하고, 부작용과 증거를 형식화하고, 불변 대상과 유효 기간을 추가하고, 실행 기록 및 리뷰 출처를 작성합니다. 모든 기준이 충족된 경우에만 `PASS`와 구조화된 `deferrals`를 함께 사용합니다. 역사적 보존이 필요하면 v1 아카이브를 별도로 유지합니다.
 
-## 존재 이유
+## 배포 프로필
 
-단일 에이전트 워크플로는 너무 많은 책임을 하나의 루프에 합치는 경우가 많습니다.
+- **VPS 우선 예시:** 원격 VPS가 조정과 신뢰할 수 없는 작업자를 호스팅하고 로컬/권한 실행자는 명시적 인수인계를 받습니다.
+- **관리형 CI:** CI가 작업자 경계이고 보호 환경이 권한 경계입니다.
+- **사람 중심:** 사람이 모든 역할을 수행하고 스키마를 감사 패킷으로 사용합니다.
 
-- 모호한 인간 의도 해석
-- 계획 선택
-- 파일 편집 또는 도구 호출
-- 결과 검토
-- 아티팩트를 둘 위치 결정
-- 작업 완료 선언
-
-이는 예측 가능한 실패를 만듭니다.
-
-| 실패 모드 | 나타나는 모습 |
-|---|---|
-| 자기 인증 | 같은 에이전트가 작업을 실행하고 독립적인 확인 없이 완료를 선언함 |
-| 증거 누락 | 요약에는 "수정됨"이라고 되어 있지만 테스트, 로그, diff, 스크린샷, 재조회 결과가 제공되지 않음 |
-| 잘못된 출력 위치 | 파일이 임의 폴더에 생겨 나중에 찾거나 재사용하거나 감사할 수 없음 |
-| 숨겨진 신뢰 경계 위반 | 원격 도구나 공개 환경의 도구가 로컬 파일, 시크릿, GUI 상태 또는 프로덕션 시스템에 접근할 수 있다고 가정함 |
-| 형식적인 리뷰 | 리뷰에서 성공 기준, 증거, 실패 모드는 살피지 않고 스타일만 확인함 |
-| 확신에 찬 실패 | 오류를 분류하거나 재시도하거나 차단 요인으로 보고하지 않고 요약에서 누락함 |
-
-증거 게이트 운영은 책임을 분리하고 완료를 감사 가능하게 만들어 이러한 실패를 줄입니다.
-
----
-
-## 핵심 아이디어
-
-```text
-Human Intent
-  -> Intent Translator
-  -> Mission Contract
-  -> Orchestrator
-  -> Implementation Agent
-  -> Evidence + Owned Outputs
-  -> Critic / Reviewer
-  -> Evidence Judge
-  -> User-facing Result or Retry
-```
-
-중요한 것은 얼마나 많은 도구나 모델을 쓰느냐가 아니라, **어떤 책임을 맡은 주체가 어떤 주장을 입증할 수 있느냐**입니다.
-
----
-
-## 제어 흐름
-
-```mermaid
-flowchart TD
-    A[Human Intent] --> B[Intent Translator]
-    B --> C[Mission Contract]
-    C --> D[Orchestrator]
-    D --> E[Implementation Agent]
-    E --> F[Evidence + Owned Outputs]
-    F --> G[Critic / Reviewer]
-    G --> H{Evidence Judge}
-    H -->|Pass| I[User-facing Result]
-    H -->|Missing Evidence| D
-    H -->|Wrong Boundary| J[Local or Privileged Execution]
-    J --> F
-```
-
----
-
-## 역할
-
-| 역할 | 책임 | 경계 |
-|---|---|---|
-| 의도 번역자(Intent Translator) | 사람의 의도를 목표, 가정, 제약 조건, 성공 기준으로 변환 | 장기간 지속되는 실행 루프를 담당하지 않음 |
-| 오케스트레이터(Orchestrator) | 작업을 배정하고, 상태를 추적하고, 재시도를 관리하며, 작업자와 리뷰어를 조정 | 증거 없이 완료를 주장하지 않음 |
-| 구현 에이전트(Implementation Agent) | 계획 수립, 편집, 명령 실행, 테스트, 증거 수집을 수행 | 최종 성공을 스스로 입증하지 않음 |
-| 비평자 / 리뷰어(Critic / Reviewer) | 명세 이탈, 누락된 증거, 위험, 실패 모드를 찾음 | 주된 구현 작업을 수행하지 않음 |
-| 독립 리뷰어(Independent Reviewer) | 불확실성이 큰 작업에 대해 두 번째 의견을 제시하거나 판단이 엇갈릴 때 결정을 도움 | 불확실성의 정도가 비용을 정당화할 때 선별적으로 활용 |
-| 증거 판단자(Evidence Judge) | 결과를 성공 기준에 다시 대응시키고 완료 판단이 정당한지 결정 | 자기 보고를 증거가 아니라 주장으로 취급 |
-| 로컬 / 권한 실행자(Local / Privileged Executor) | 로컬 파일, GUI, 시크릿, 배포 또는 머신별 상태를 처리 | 명시적인 신뢰 및 승인 경계 안에서만 동작 |
-
-하나의 런타임이 여러 역할을 수행할 수 있지만, 책임은 논리적으로 분리되어 있어야 합니다.
-
----
-
-## 미션 계약
-
-미션 계약은 오케스트레이션으로 전달되는 작업 단위입니다.
-
-```yaml
-mission:
-  objective: "What should be true when this is done?"
-  non_goals:
-    - "What should not be changed or attempted?"
-  assumptions:
-    - "What is believed but not yet proven?"
-  success_criteria:
-    - criterion: "Specific condition that must be satisfied"
-      required_evidence: "Test, log, diff, read-back, screenshot, API response, etc."
-  allowed_side_effects:
-    - "Permitted file changes, commands, messages, API calls, or deployments"
-  output_ownership:
-    owner: "project | artifact store | scratch | user-delivery | local-only"
-    expected_location: "Where durable outputs should be written"
-    retention: "temporary | task artifact | project lifetime | long-term reference"
-    retrieval_method: "How this output should be found later"
-  local_required: false
-  risk_level: low
-```
-
-좋은 미션 계약은 간결하고 명시적이며 테스트할 수 있습니다. 이 저장소에는 [`schemas/mission-contract.schema.json`](schemas/mission-contract.schema.json)에 기계적으로 검사할 수 있는 스키마가 포함되어 있습니다.
-
----
-
-## 증거 게이트
-
-작업마다 필요한 증거가 다릅니다.
-
-| 작업 유형 | 최소 증거 |
-|---|---|
-| 조사 / 웹 검증 | 출처 URL, 가능한 경우 공식 문서, 관련성이 있다면 최신 상태 확인 |
-| 코드 변경 | Diff 요약, 변경 대상을 검증하는 테스트, 관련 스모크 테스트 |
-| 설정 변경 | 설정을 다시 읽은 결과와 설정이 활성화되었음을 보여 주는 명령 또는 동작 |
-| 설치 / 설정 | 성공 종료 상태를 확인할 수 있는 version/help/status 명령 |
-| API 연동 | 시크릿을 가린 실제 요청/응답 예시 |
-| 로컬 전용 작업 | 아티팩트를 포함한 구조화된 인수인계 또는 로컬 실행 보고서 |
-| 아키텍처 결정 | 장단점 비교 메모와 비평자 승인 또는 명시적으로 수용한 위험 |
-| 공개 참조 자료 | 민감 정보를 제거한 초안, 출처 이력, 출력 위치, 회수 확인, 검증 실행 |
-
-경험 법칙:
-
-> 회의적인 리뷰어를 설득하지 못할 증거라면, 작업은 아직 완료되지 않았습니다.
-
----
-
-## 출력물 소유권
-
-증거 게이트 작업에서는 임의의 위치에 파일을 만들면 안 됩니다. 일정 기간 보존할 모든 출력물은 쓰기 전에 소유권을 결정해야 합니다.
-
-```mermaid
-flowchart TD
-    A[New Output] --> B{What owns it?}
-    B -->|Project deliverable| C[Project repo or workspace]
-    B -->|Evidence / logs| D[Dated artifact directory]
-    B -->|Reusable reference| E[Indexed knowledge base or artifact store]
-    B -->|Temporary experiment| F[Named scratch area + cleanup expectation]
-    B -->|User-facing file| G[Delivery folder or attached artifact]
-    C --> H[Record verification]
-    D --> H
-    E --> H
-    F --> H
-    G --> H
-```
-
-| 출력물 분류 | 좋은 기본값 | 피할 것 |
-|---|---|---|
-| 프로젝트 산출물 | 관련 프로젝트 저장소 또는 워크스페이스 | 프로젝트 밖의 추적되지 않는 폴더 |
-| 증거 / 로그 / 작업 메모 | 매니페스트와 검증 메모가 있는 날짜별 아티팩트 디렉터리 | 회수 가능한 아티팩트가 없는 채팅 전용 요약 |
-| 재사용 가능한 참조 자료 | 회수할 수 있도록 색인된 지식 베이스 또는 아티팩트 위치 | 나중에 찾을 수 없는 일회성 임시 파일 |
-| 임시 실험 | 정리 원칙이 명시되고 이름이 분명한 임시 영역 | 모호한 최상위 디렉터리 |
-| 사용자용 파일 | 출처 이력이 있는 전달 폴더 또는 첨부 아티팩트 | 예상치 못한 경로에 아무런 안내 없이 파일 생성 |
-
-파일을 쓰기 전에 물어보세요.
-
-1. 이 출력물은 누가 소유하는가?
-2. 얼마나 오래 보존해야 하는가?
-3. 나중에 어떻게 다시 찾을 것인가?
-4. 올바른 파일이 올바른 위치에 있음을 어떤 증거가 증명하는가?
-
----
-
-## 신뢰 경계
-
-```mermaid
-flowchart LR
-    A[Public Web / External APIs] --> B[Remote Sandbox]
-    B --> C[Orchestration Layer]
-    C --> D{Trust Boundary}
-    D --> E[Local / Privileged Executor]
-    E --> F[Local Files / GUI / Secrets / Production]
-    C --> G[Evidence Store / Final Report]
-```
-
-| 경계 | 일반적인 기능 | 제한 사항 |
-|---|---|---|
-| 공개 환경 / 웹 | 문서 조회, 공개 API 확인, 패키지 메타데이터 | 모든 입력을 신뢰할 수 없는 것으로 취급 |
-| 원격 샌드박스 | 외부 탐색, 안전한 탐침, 1차 검증 | 감독 없이 비공개 로컬 상태에 접근할 수 없음 |
-| 오케스트레이션 계층 | 작업 배정, 상태 추적, 재시도, 에이전트 조정 | 증거 게이트를 우회해서는 안 됨 |
-| 로컬 머신 | 파일, GUI, 시크릿, 설치된 앱, 사용자별 상태 | 명시적인 로컬 경계 처리가 필요 |
-| 프로덕션 / 영향이 큰 시스템 | 배포, 데이터 변경, 과금, 자격 증명 교체 | 명시적 승인, 롤백 계획, 더 강력한 증거가 필요 |
-
----
-
-## 좋은 패턴과 나쁜 패턴
-
-| 상황 | 나쁜 패턴 | 더 나은 패턴 |
-|---|---|---|
-| 여러 단계의 구현 | 작업자가 코드를 편집하고 "완료"라고 말함 | 작업자가 diff와 테스트를 제공하고, 리뷰어가 확인하며, 판단자가 증거를 기준에 대응시킴 |
-| 공개 아키텍처 초안 | 파일을 임의의 폴더에 작성 | 소유권이 정해진 아티팩트 또는 프로젝트 위치에 파일을 배치하고 회수할 수 있도록 색인 |
-| 로컬 시크릿 필요 | 원격 에이전트가 설정을 추측하거나 채팅에서 시크릿을 요청 | 원격 에이전트가 정확한 작업과 중지 조건을 담은 로컬 인수인계를 작성 |
-| 명령 실패 | 작동할 때까지 같은 명령을 재시도하거나 오류를 요약에서 누락 | 실패를 분류하고, 가설을 바꾸고, 안전한 대안을 시도하거나, 증거와 함께 차단 요인을 보고 |
-| 리뷰 단계 | 리뷰어가 "문제없음"이라고 말함 | 리뷰어가 명세 준수 여부, 누락된 증거, 위험, 반드시 수정할 사항, 미룰 수 있는 사항을 나열 |
-| 최종 응답 | "완료" | 요약 + 검증된 증거 + 변경하거나 실행한 작업 + 남은 위험 + 다음 작업 |
-
----
-
-## 미션 계약 예시
-
-### 예시 1: 공개 가능한 참조 문서
-
-```yaml
-mission:
-  objective: "Create a public reference README for an AI operations architecture."
-  non_goals:
-    - "Expose private agent names, chat IDs, credentials, paths, or provider-specific internals."
-  assumptions:
-    - "The target audience wants a reusable pattern, not a private operations manual."
-  success_criteria:
-    - criterion: "README explains the pattern clearly."
-      required_evidence: "Readable Markdown with diagrams, roles, gates, examples, and security notes."
-    - criterion: "No private/internal names are present."
-      required_evidence: "Sanitization search returns zero matches for the internal-name list."
-    - criterion: "The draft can be reused later."
-      required_evidence: "File is stored in an indexed artifact or project location with manifest/verification notes."
-  allowed_side_effects:
-    - "Write Markdown and Mermaid files under the chosen artifact or project path."
-    - "Rebuild the artifact/search index."
-  output_ownership:
-    owner: "artifact store"
-    expected_location: "artifacts/<date>/<task-id>/files/public-architecture/README.md"
-    retention: "long-term reference"
-    retrieval_method: "artifact index search"
-  local_required: false
-  risk_level: low
-```
-
-### 예시 2: 리뷰가 포함된 코드 변경
-
-```yaml
-mission:
-  objective: "Fix a bug in a project and verify the fix."
-  non_goals:
-    - "Rewrite unrelated modules."
-    - "Change production configuration."
-  assumptions:
-    - "The bug is reproducible with a targeted test or smoke command."
-  success_criteria:
-    - criterion: "Bug is reproduced before the fix."
-      required_evidence: "Failing test, log, or minimal reproduction."
-    - criterion: "Bug is fixed with minimal targeted change."
-      required_evidence: "Diff summary and passing targeted test."
-    - criterion: "No obvious regression is introduced."
-      required_evidence: "Relevant smoke test or existing test subset passes."
-  allowed_side_effects:
-    - "Modify files in the project workspace."
-    - "Run local tests and linters."
-  output_ownership:
-    owner: "project"
-    expected_location: "project repository"
-    retention: "project lifetime"
-    retrieval_method: "git diff, test logs, artifact verification notes"
-  local_required: false
-  risk_level: medium
-```
-
----
-
-## 최소 구현
-
-이 패턴을 사용하는 데 큰 플랫폼은 필요하지 않습니다.
-
-최소 구성은 다음과 같을 수 있습니다.
-
-```text
-1. Human writes request.
-2. Translator writes mission contract.
-3. Orchestrator tracks checklist, retries, and owner boundaries.
-4. Worker executes commands or edits.
-5. Outputs are placed in the correct project/artifact/scratch/delivery location.
-6. Reviewer checks spec compliance, risks, and missing evidence.
-7. Judge maps evidence to success criteria.
-8. Final report separates: done, verified, risks, and next actions.
-```
-
-역할은 사람, 에이전트, 스크립트 또는 그 조합일 수 있습니다.
-
----
-
-## 최종 보고서 템플릿
-
-```yaml
-summary:
-  - "What changed or what was learned"
-
-verified:
-  - evidence: "Command, test, URL, artifact, log, diff, screenshot, or read-back"
-    result: "What it proves"
-
-changed_or_executed:
-  - "Actions actually performed"
-
-outputs:
-  - path_or_url: "Where the durable output lives"
-    owner: "Who owns it"
-    retention: "How long it should live"
-    retrieval: "How to find it later"
-
-remaining_risks:
-  - "What could still be wrong or unverified"
-
-next_actions_if_needed:
-  - "Specific next step, owner, and stop condition"
-```
-
-"완료" 또는 "문제없음"이라고만 말하는 최종 보고서는 피하세요. 보고서에는 증거와 출력물의 출처 이력이 드러나야 합니다. 이 저장소에는 [`schemas/final-report.schema.json`](schemas/final-report.schema.json)에 기계적으로 검사할 수 있는 스키마가 포함되어 있으며, [`examples/case-study-001/`](examples/case-study-001/)에 전체 과정을 보여 주는 예시가 있습니다.
-
----
-
-## 이 패턴을 사용할 때
-
-다음과 같은 경우 사용하세요.
-
-- 작업에 의미 있는 단계가 셋 이상 있음
-- 실패 비용이 크거나 감지하기 어려움
-- 여러 에이전트, 모델, 도구, 환경이 관여함
-- 로컬/비공개 상태가 중요함
-- 완료에 파일, 코드, 설정 또는 기타 지속 출력물이 필요함
-- 리뷰와 증거가 중요함
-
-다음에는 과도하게 사용하지 마세요.
-
-- 단순한 일회성 질문
-- 일정 기간 보존할 아티팩트가 없는 저위험 형식 변경 또는 초안 작성
-- 하나의 출처 확인으로 충분한 빠른 조회
-- 오케스트레이션 비용이 이익을 초과하는 작업
-
----
+통제와 기여 게이트는 [`THREAT_MODEL.md`](THREAT_MODEL.md), [`SECURITY.md`](SECURITY.md), [`CONTRIBUTING.md`](CONTRIBUTING.md)를 참고하십시오.
 
 ## 라이선스
 
-이 참조 패키지는 **Creative Commons Attribution 4.0 International License (CC BY 4.0)**에 따라 라이선스가 부여됩니다.
-
-전체 라이선스 문구는 [`LICENSE`](LICENSE)를 참조하세요.
+Creative Commons Attribution 4.0 International 라이선스입니다. [`LICENSE`](LICENSE)를 참고하십시오.

@@ -1,29 +1,44 @@
-mission_ref: "example-mission-0001"
-execution_ref: "example-execution-0001"
-collected_at: "2026-01-15T12:00:00Z"
-collected_by_role: "implementation agent"
-
-criterion_evidence:
-  - criterion: "The requested artifact exists at its owned location."
-    evidence: "Read-back of docs/example-reference.md and validation output."
-    result: "The artifact exists and the deterministic checks pass."
-
-commands:
-  - intent: "Validate schemas, examples, links, and sanitization."
-    command: "npm run validate"
-    exit_status: 0
-    output_summary: "Validation completed without findings."
-
-artifacts:
-  - path_or_url: "docs/example-reference.md"
-    purpose: "Fictional project reference artifact."
-    owner: "project"
-    retention: "project lifetime"
-    retrieval: "Version-controlled project path."
-    integrity: "Record a commit identifier or digest when the artifact is finalized."
-
-assumptions:
-  - "No external factual claims require a current source check."
-
+document_type: evidence_record
+schema_version: "2.0"
+evidence_record_id: example-evidence-record-0001
+mission_id: example-mission-0001
+execution_id: example-execution-0001
+producer: "runtime:example-worker-v2"
+subject: &subject
+  kind: git_commit
+  algorithm: git-sha1
+  value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  locator: "https://example.org/fictional/reference/revision/a"
+items:
+  - evidence_id: example-artifact-evidence-0001
+    criterion_ids: [artifact-exists]
+    evidence_type: artifact
+    captured_at: "2026-07-14T09:28:00Z"
+    expires_at: "2026-08-14T09:28:00Z"
+    subject: *subject
+    description: "Immutable artifact manifest for the fictional document."
+    result: pass
+    details:
+      artifact:
+        uri: "https://example.org/artifacts/example-reference.md"
+        digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      media_type: "text/markdown"
+  - evidence_id: example-command-evidence-0001
+    criterion_ids: [validation-passes]
+    evidence_type: command_result
+    captured_at: "2026-07-14T09:30:00Z"
+    expires_at: "2026-08-14T09:30:00Z"
+    subject: *subject
+    description: "Deterministic validator command result."
+    result: pass
+    details:
+      command: "egmo validate"
+      exit_status: 0
+      started_at: "2026-07-14T09:29:00Z"
+      ended_at: "2026-07-14T09:30:00Z"
+      environment_ref: "container:python-3.11-node-22"
+      output_artifact:
+        uri: "https://example.org/artifacts/validation.txt"
+        digest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 known_limits:
-  - "Deterministic validation checks structure and known patterns, not factual truth."
+  - "Structure and deterministic checks do not prove factual truth."

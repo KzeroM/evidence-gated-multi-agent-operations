@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/egmo/schemas/execution-record.schema.json",
+  "title": "EGMO v2 Execution Record",
+  "type": "object",
+  "required": ["document_type", "schema_version", "execution_id", "mission_id", "idempotency_key", "worker", "worker_runtime_ref", "worker_model_ref", "worker_execution_id", "environment_ref", "input_subject", "current_state", "state_history", "retry_policy", "timeout_seconds", "attempt", "failure", "cancellation", "rollback_or_compensation"],
+  "additionalProperties": false,
+  "properties": {
+    "document_type": {"const": "execution_record"},
+    "schema_version": {"const": "2.0"},
+    "execution_id": {"$ref": "common.schema.json#/$defs/execution_id"},
+    "mission_id": {"$ref": "common.schema.json#/$defs/mission_id"},
+    "idempotency_key": {"type": "string", "pattern": "^[A-Za-z0-9._:-]{8,128}$"},
+    "worker": {"$ref": "common.schema.json#/$defs/identity_ref"},
+    "worker_runtime_ref": {"$ref": "common.schema.json#/$defs/identity_ref"},
+    "worker_model_ref": {"$ref": "common.schema.json#/$defs/identity_ref"},
+    "worker_execution_id": {"$ref": "common.schema.json#/$defs/execution_id"},
+    "environment_ref": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/@-]{2,255}$"},
+    "input_subject": {"$ref": "common.schema.json#/$defs/subject"},
+    "output_subject": {"$ref": "common.schema.json#/$defs/subject"},
+    "current_state": {"$ref": "common.schema.json#/$defs/execution_state"},
+    "state_history": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["state", "at", "actor_ref"], "additionalProperties": false, "properties": {"state": {"$ref": "common.schema.json#/$defs/execution_state"}, "at": {"$ref": "common.schema.json#/$defs/date_time"}, "actor_ref": {"$ref": "common.schema.json#/$defs/identity_ref"}, "reason": {"$ref": "common.schema.json#/$defs/description"}}}},
+    "retry_policy": {"type": "object", "required": ["max_attempts", "remaining_attempts"], "additionalProperties": false, "properties": {"max_attempts": {"type": "integer", "minimum": 1, "maximum": 20}, "remaining_attempts": {"type": "integer", "minimum": 0, "maximum": 20}}},
+    "timeout_seconds": {"type": "integer", "minimum": 1, "maximum": 604800},
+    "attempt": {"type": "integer", "minimum": 1, "maximum": 20},
+    "failure": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["classification", "summary", "retryable"], "additionalProperties": false, "properties": {"classification": {"enum": ["validation", "dependency", "permission", "timeout", "conflict", "external", "unknown"]}, "summary": {"$ref": "common.schema.json#/$defs/description"}, "retryable": {"type": "boolean"}}}]},
+    "cancellation": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["requested_at", "requested_by", "reason"], "additionalProperties": false, "properties": {"requested_at": {"$ref": "common.schema.json#/$defs/date_time"}, "requested_by": {"$ref": "common.schema.json#/$defs/identity_ref"}, "reason": {"$ref": "common.schema.json#/$defs/description"}}}]},
+    "rollback_or_compensation": {"oneOf": [{"type": "null"}, {"type": "object", "required": ["plan_ref", "status"], "additionalProperties": false, "properties": {"plan_ref": {"$ref": "common.schema.json#/$defs/plan_ref"}, "status": {"enum": ["not_started", "pending", "completed", "failed"]}, "evidence_ids": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/evidence_id"}}}}]}
+  }
+}

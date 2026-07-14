@@ -1,7 +1,8 @@
 flowchart LR
-    A[Public Web / External APIs] --> B[Remote Sandbox]
-    B --> C[Orchestration Layer]
-    C --> D{Trust Boundary}
-    D --> E[Local / Privileged Executor]
-    E --> F[Local Files / GUI / Secrets / Production]
-    C --> G[Evidence Store / Final Report]
+    A[Untrusted inputs] --> B[Remotely managed execution boundary]
+    B --> C[Evidence packet]
+    C --> D[Independent read-only review]
+    D --> E{Evidence judgment}
+    E -->|Scoped handoff| F[Trusted or privileged boundary]
+    F --> C
+    E -->|Fresh PASS| G[Final report]

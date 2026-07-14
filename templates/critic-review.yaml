@@ -1,26 +1,41 @@
-mission_ref: "example-mission-0001"
-execution_ref: "example-execution-0001"
-review_ref: "example-review-0001"
-reviewed_at: "2026-01-15T13:00:00Z"
-reviewer_role: "critic"
-
-verdict: "PASS"
-
-spec_compliance:
-  - "The artifact matches the mission objective and allowed scope."
-
-evidence_assessment:
-  - criterion: "The requested artifact exists at its owned location."
-    status: "satisfied"
-    rationale: "The read-back and deterministic validation support the claim."
-
-trust_boundary_assessment:
-  - "No local or privileged boundary was crossed."
-
-public_safety_assessment:
-  - "Examples are fictional and the sanitization check passes."
-
+document_type: critic_review
+schema_version: "2.0"
+review_id: example-review-0001
+mission_id: example-mission-0001
+execution_id: example-execution-0001
+evidence_record_ids: [example-evidence-record-0001]
+reviewed_at: "2026-07-14T09:45:00Z"
+valid_until: "2026-08-14T09:45:00Z"
+subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  locator: "https://example.org/fictional/reference/revision/a"
+reviewer: "runtime:example-reviewer-v2"
+review_execution_id: example-review-run-0001
+provenance:
+  runtime_ref: "runtime:example-reviewer-v2"
+  model_ref: "model:example-critic-v2"
+  worker_execution_ref: example-worker-run-0001
+  context_sources:
+    - "https://example.org/review-packets/example-mission-0001"
+  context_scope: "Mission, immutable subject, evidence artifacts, and resulting diff."
+  access_mode: read_only
+  read_only: true
+  conflicts: []
+verdict: PASS
+criteria:
+  - criterion_id: artifact-exists
+    status: satisfied
+    evidence_ids: [example-artifact-evidence-0001]
+    rationale: "The artifact digest and URI bind the result to the reviewed subject."
+  - criterion_id: validation-passes
+    status: satisfied
+    evidence_ids: [example-command-evidence-0001]
+    rationale: "The command record includes timing, environment, exit status, and output digest."
 findings: []
 must_fix: []
-can_defer:
-  - "Add task-specific semantic checks if this template is adapted to higher-risk work."
+deferrals:
+  - description: "Add project-specific semantic checks before adapting this packet."
+    accepted_by: "human:example-approver"
+    expires_at: "2026-08-14T09:45:00Z"

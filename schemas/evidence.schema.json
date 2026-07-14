@@ -1,60 +1,35 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.com/evidence-gated-multi-agent-operations/schemas/evidence.schema.json",
-  "title": "Evidence Record",
+  "$id": "https://example.org/egmo/schemas/evidence.schema.json",
+  "title": "EGMO v2 Evidence Record",
   "type": "object",
-  "required": ["mission_ref", "execution_ref", "collected_at", "collected_by_role", "criterion_evidence", "commands", "artifacts", "assumptions", "known_limits"],
+  "required": ["document_type", "schema_version", "evidence_record_id", "mission_id", "execution_id", "producer", "subject", "items", "known_limits"],
   "additionalProperties": false,
   "properties": {
-    "mission_ref": {"type": "string", "minLength": 1},
-    "execution_ref": {"type": "string", "minLength": 1},
-    "collected_at": {"type": "string", "minLength": 1},
-    "collected_by_role": {"type": "string", "minLength": 1},
-    "criterion_evidence": {
-      "type": "array",
-      "minItems": 1,
+    "document_type": {"const": "evidence_record"},
+    "schema_version": {"const": "2.0"},
+    "evidence_record_id": {"$ref": "common.schema.json#/$defs/evidence_id"},
+    "mission_id": {"$ref": "common.schema.json#/$defs/mission_id"},
+    "execution_id": {"$ref": "common.schema.json#/$defs/execution_id"},
+    "producer": {"$ref": "common.schema.json#/$defs/identity_ref"},
+    "subject": {"$ref": "common.schema.json#/$defs/subject"},
+    "items": {
+      "type": "array", "minItems": 1, "maxItems": 500,
       "items": {
-        "type": "object",
-        "required": ["criterion", "evidence", "result"],
-        "additionalProperties": false,
+        "type": "object", "required": ["evidence_id", "criterion_ids", "evidence_type", "captured_at", "expires_at", "subject", "description", "result", "details"], "additionalProperties": false,
         "properties": {
-          "criterion": {"type": "string", "minLength": 1},
-          "evidence": {"type": "string", "minLength": 1},
-          "result": {"type": "string", "minLength": 1}
+          "evidence_id": {"$ref": "common.schema.json#/$defs/evidence_id"},
+          "criterion_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "common.schema.json#/$defs/criterion_id"}},
+          "evidence_type": {"$ref": "common.schema.json#/$defs/evidence_type"},
+          "captured_at": {"$ref": "common.schema.json#/$defs/date_time"},
+          "expires_at": {"$ref": "common.schema.json#/$defs/date_time"},
+          "subject": {"$ref": "common.schema.json#/$defs/subject"},
+          "description": {"$ref": "common.schema.json#/$defs/description"},
+          "result": {"enum": ["pass", "fail", "indeterminate"]},
+          "details": {"$ref": "common.schema.json#/$defs/evidence_details"}
         }
       }
     },
-    "commands": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["intent", "command", "exit_status", "output_summary"],
-        "additionalProperties": false,
-        "properties": {
-          "intent": {"type": "string", "minLength": 1},
-          "command": {"type": "string", "minLength": 1},
-          "exit_status": {"type": "integer"},
-          "output_summary": {"type": "string", "minLength": 1}
-        }
-      }
-    },
-    "artifacts": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["path_or_url", "purpose", "owner", "retention", "retrieval", "integrity"],
-        "additionalProperties": false,
-        "properties": {
-          "path_or_url": {"type": "string", "minLength": 1},
-          "purpose": {"type": "string", "minLength": 1},
-          "owner": {"type": "string", "minLength": 1},
-          "retention": {"type": "string", "minLength": 1},
-          "retrieval": {"type": "string", "minLength": 1},
-          "integrity": {"type": "string", "minLength": 1}
-        }
-      }
-    },
-    "assumptions": {"type": "array", "items": {"type": "string", "minLength": 1}},
-    "known_limits": {"type": "array", "items": {"type": "string", "minLength": 1}}
+    "known_limits": {"type": "array", "items": {"$ref": "common.schema.json#/$defs/description"}, "maxItems": 50}
   }
 }

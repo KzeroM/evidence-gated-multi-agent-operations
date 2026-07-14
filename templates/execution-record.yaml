@@ -1,0 +1,44 @@
+document_type: execution_record
+schema_version: "2.0"
+execution_id: example-execution-0001
+mission_id: example-mission-0001
+idempotency_key: "example-mission-0001-attempt-1"
+worker: "runtime:example-worker-v2"
+worker_runtime_ref: "runtime:example-worker-v2"
+worker_model_ref: "model:example-implementer-v2"
+worker_execution_id: example-worker-run-0001
+environment_ref: "container:python-3.11-node-22"
+input_subject: &subject
+  kind: git_commit
+  algorithm: git-sha1
+  value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  locator: "https://example.org/fictional/reference/revision/a"
+output_subject: *subject
+current_state: PASSED
+state_history:
+  - state: DRAFT
+    at: "2026-07-14T09:00:00Z"
+    actor_ref: "service:example-controller"
+  - state: APPROVED
+    at: "2026-07-14T09:05:00Z"
+    actor_ref: "human:example-approver"
+  - state: RUNNING
+    at: "2026-07-14T09:10:00Z"
+    actor_ref: "runtime:example-worker-v2"
+  - state: EVIDENCE_PENDING
+    at: "2026-07-14T09:30:00Z"
+    actor_ref: "runtime:example-worker-v2"
+  - state: REVIEW_PENDING
+    at: "2026-07-14T09:35:00Z"
+    actor_ref: "service:example-controller"
+  - state: PASSED
+    at: "2026-07-14T10:00:00Z"
+    actor_ref: "service:example-judge"
+retry_policy:
+  max_attempts: 2
+  remaining_attempts: 1
+timeout_seconds: 1800
+attempt: 1
+failure: null
+cancellation: null
+rollback_or_compensation: null
