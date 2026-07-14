@@ -2,11 +2,19 @@
 
 [English](README.md) / [한국어](README.ko.md)
 
-A vendor-neutral operating pattern for complex AI-assisted work where **intent translation, orchestration, execution, critique, output ownership, and completion judgment are separated**.
+This reference architecture helps teams conduct complex AI-assisted work by separating **intent translation, orchestration, execution, critique, output ownership, and completion judgment**.
 
-The pattern is built around one rule:
+It is built around one rule:
 
 > **Do not treat an agent's completion claim as proof. Require evidence, place outputs deliberately, and judge the result against explicit success criteria.**
+
+## Overview
+
+This reference architecture assumes that LLM workers and orchestration services run on a remote VPS.
+The VPS is the primary remote execution boundary: it handles remote model execution, orchestration, public and network discovery, automation, evidence collection, and durable task state.
+A user's local machine is a separate, optional execution boundary, used only when work requires local files, a GUI, device or session state, secrets, or privileged actions that cannot safely run on the VPS.
+Any crossing between the two boundaries requires an explicit, scoped handoff and evidence returned to the VPS-side workflow; acceptance by the transport alone does not prove completion.
+This is an architectural operating assumption, not a requirement that every role use a separate physical server or process, and not a promise of a hosted service.
 
 ## Repository contents
 
@@ -14,12 +22,10 @@ The pattern is built around one rule:
 README.md                         # Main public reference
 README.ko.md                      # Korean translation
 THREAT_MODEL.md                   # Public threat model and independence criteria
-PUBLISH_CHECKLIST.md              # Pre-publication checklist
 SECURITY.md                       # Safe vulnerability-reporting guidance
 CONTRIBUTING.md                   # Public-safe contribution and validation guide
 CODE_OF_CONDUCT.md                # Community expectations and enforcement
 LICENSE                           # Creative Commons Attribution 4.0 International
-LICENSE_OPTIONS.md                # Owner-facing license decision notes
 diagrams/                         # Standalone Mermaid diagrams
 examples/                         # Reusable mission/report templates and case studies
 templates/                        # Ready-to-copy mission, evidence, review, and handoff files
@@ -383,38 +389,6 @@ Do not overuse it for:
 - low-risk formatting or drafting tasks with no durable artifact
 - quick lookups where one source check is enough
 - tasks where orchestration overhead exceeds the benefit
-
----
-
-## Public sharing checklist
-
-Before publishing an implementation or case study:
-
-- [ ] Remove tokens, API keys, webhook URLs, cookies, and secret names.
-- [ ] Remove personal chat IDs, account IDs, machine names, private paths, and usernames.
-- [ ] Generalize provider names if provider identity is not essential.
-- [ ] Redact logs that include headers, local paths, credentials, prompts containing secrets, or private file contents.
-- [ ] Avoid publishing exact port mappings, firewall assumptions, or relay topology unless intentionally documented.
-- [ ] Separate the reusable architectural pattern from private operational details.
-- [ ] Confirm diagrams and examples use neutral role names.
-- [ ] Confirm output locations in examples are illustrative, not private infrastructure details.
-- [ ] Validate mission contracts and final reports against the schemas.
-- [ ] Run Markdown, link, Mermaid, and sanitization checks before publishing.
-
----
-
-## Neutral names for the pattern
-
-Possible names:
-
-- Evidence-Gated Multi-Agent Operations
-- Evidence-Gated Agent Orchestration
-- Translator–Orchestrator–Worker–Critic–Judge Pattern
-- Evidence-Based Completion Pattern
-
-The name matters less than the discipline:
-
-> **Translate intent, orchestrate work, execute changes, place outputs deliberately, critique results, and judge completion using evidence.**
 
 ---
 
