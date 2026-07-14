@@ -1,0 +1,32 @@
+version: 1
+extensions:
+  - .md
+  - .txt
+  - .json
+  - .yaml
+  - .yml
+  - .mmd
+  - .py
+  - .sh
+  - .js
+  - .jsx
+  - .ts
+  - .tsx
+  - .toml
+  - .ini
+  - .cfg
+  - .csv
+  - .env
+allowed_email_domains:
+  - example.org
+allowed_documentation_networks:
+  - 192.0.2.0/24
+  - 198.51.100.0/24
+  - 203.0.113.0/24
+  - 2001:db8::/32
+exclude_paths:
+  - sanitization-policy.yaml
+  - egmo/protocol.py
+  - tests/test_sanitization.py
+patterns:
+  private_operating_name: "(?i)\\bprivate[-_ ]operations?[-_ ]codename\\b"

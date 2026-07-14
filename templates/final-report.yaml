@@ -1,0 +1,31 @@
+document_type: final_report
+schema_version: "2.0"
+report_id: example-report-0001
+mission_id: example-mission-0001
+execution_id: example-execution-0001
+review_id: example-review-0001
+subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  locator: "https://example.org/fictional/reference/revision/a"
+judgment: PASSED
+summary:
+  - "The fictional reference artifact was produced and independently reviewed."
+verified_criterion_ids: [artifact-exists, validation-passes]
+evidence_ids: [example-artifact-evidence-0001, example-command-evidence-0001]
+changed_or_executed:
+  - "Created the reference artifact and ran deterministic validation."
+outputs:
+  - uri: "https://example.org/artifacts/example-reference.md"
+    owner: "fictional documentation project"
+    retention: "project lifetime"
+    retrieval: "Artifact manifest and version history."
+    subject:
+      kind: git_commit
+      algorithm: git-sha1
+      value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      locator: "https://example.org/fictional/reference/revision/a"
+remaining_risks:
+  - "The example validator cannot establish factual truth."
+next_actions: []

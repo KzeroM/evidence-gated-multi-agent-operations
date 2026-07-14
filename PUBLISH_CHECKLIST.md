@@ -1,40 +1,37 @@
 # Publish Checklist
 
-Use this before posting the package to a repository, gist, blog, or documentation site.
+## Protocol and content
 
-## Content
+- [ ] English and Korean READMEs describe the same v2 protocol and boundary model.
+- [ ] The package is still a reference protocol, not an orchestration/runtime implementation.
+- [ ] Every fenced YAML document declares a supported type and version and validates.
+- [ ] Mission, execution, evidence, review, and report examples form a valid ID-linked chain.
+- [ ] Risk approval, capabilities, immutable subjects, freshness, and reviewer provenance are present.
+- [ ] Verdicts and execution states match their documented semantics.
+- [ ] Failure examples cover insufficient/stale/tampered evidence, independence, handoff, and rollback.
+- [ ] Migration notes identify v2 breaking changes.
 
-- [ ] README title and first paragraph are clear to a reader with no private context.
-- [ ] Diagrams render correctly in the target platform.
-- [ ] Examples use neutral role names and illustrative paths only.
-- [ ] Output ownership principle is included.
-- [ ] Good-vs-bad patterns are concrete and non-private.
-- [ ] Mission contract examples are generic enough for public reuse.
-- [ ] `THREAT_MODEL.md` covers prompt injection, untrusted tool output, artifact tampering, secret leakage, audit integrity, and reviewer independence.
+## Public safety
 
-## Sanitization
+- [ ] Examples use fictional identities, `example.org`, and documentation network ranges only.
+- [ ] No credentials, secret-shaped environment values, private paths (POSIX or Windows), hosts, chat IDs, account IDs, or incident history appear.
+- [ ] Working-tree, tracked-file, and Git-history sanitization modes pass.
+- [ ] The pinned standard secret scanner passes.
+- [ ] An independent reviewer checks the exact commit subject.
 
-- [ ] No private agent names or operating names.
-- [ ] No personal chat IDs, account IDs, usernames, machine names, or private paths.
-- [ ] No webhook URLs, tokens, cookies, API keys, or secret names.
-- [ ] No exact private relay topology, firewall assumptions, or sensitive port mapping.
-- [ ] No provider-specific billing/auth details unless intentionally documented.
+## Gates
 
-## Packaging
+- [ ] Python syntax compilation passes.
+- [ ] Unit, CLI, semantic, and negative end-to-end tests pass.
+- [ ] Editable package install plus `egmo --help`, `validate`, `judge`, and `create-task` smoke tests pass.
+- [ ] Real Mermaid CLI rendering passes for standalone and inline diagrams.
+- [ ] The malformed Mermaid fixture is rejected.
+- [ ] Markdown lint and local link checks pass.
+- [ ] `git diff --check` passes and the intended file list is reviewed.
+- [ ] CI runs all corresponding gates with read-only repository permission.
 
-- [ ] License chosen and committed.
-- [ ] `LICENSE_OPTIONS.md` replaced or supplemented by a real license.
-- [ ] `README.md` is the entry point.
-- [ ] `diagrams/` files match the inline Mermaid diagrams.
-- [ ] `schemas/` and `examples/` validate locally or in CI.
-- [ ] `.github/workflows/validate.yml` runs validation, Markdown lint, local link check, Mermaid validation, and sanitization scan.
-- [ ] Archive/repository contains only publishable files.
+## Release hygiene
 
-## Final evidence
-
-- [ ] Sanitization search returns zero matches for private terms.
-- [ ] Schema/example validation passes.
-- [ ] Markdown structural check passes.
-- [ ] Local link check passes or known external link limitations are documented.
-- [ ] Mermaid diagrams render.
-- [ ] Archive contents were listed and reviewed.
+- [ ] `LICENSE` and `README.md` are present and linked.
+- [ ] Package/archive contents contain only publishable files.
+- [ ] No release or visibility/history change is made without separate authorization.

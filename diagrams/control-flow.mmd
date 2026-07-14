@@ -1,12 +1,9 @@
 flowchart TD
-    A[Human Intent] --> B[Intent Translator]
-    B --> C[Mission Contract]
-    C --> D[Orchestrator]
-    D --> E[Implementation Agent]
-    E --> F[Evidence + Owned Outputs]
-    F --> G[Critic / Reviewer]
-    G --> H{Evidence Judge}
-    H -->|Pass| I[User-facing Result]
-    H -->|Missing Evidence| D
-    H -->|Wrong Boundary| J[Local or Privileged Execution]
-    J --> F
+    A[Human intent] --> B[Mission contract and approval]
+    B --> C[Execution record]
+    C --> D[Typed evidence bound to subject]
+    D --> E[Independent critic review]
+    E --> F{Judge criteria and freshness}
+    F -->|PASS| G[Final report]
+    F -->|REQUEST_CHANGES| C
+    F -->|BLOCKED or INCONCLUSIVE| H[Escalate with evidence]

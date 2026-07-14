@@ -2,10 +2,13 @@
   "scripts": {
     "validate": "python3 scripts/validate.py",
     "test": "python3 -m unittest discover -s tests -v",
-    "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
-    "lint:mermaid": "bash scripts/validate-mermaid.sh"
+    "lint:markdown": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#.venv\"",
+    "lint:mermaid": "bash scripts/validate-mermaid.sh",
+    "scan:secrets": "bash scripts/validate-secrets.sh",
+    "smoke:package": "bash scripts/package-smoke.sh"
   },
   "devDependencies": {
-    "markdownlint-cli2": "^0.17.2"
+    "@mermaid-js/mermaid-cli": "^11.16.0",
+    "markdownlint-cli2": "^0.23.0"
   }
 }

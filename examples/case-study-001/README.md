@@ -1,112 +1,236 @@
-# Case Study 001: Public Reference Package Hardening
+# Case Study 001: Reference Package Hardening
 
-This case study shows the pattern applied to this repository. It is intentionally small and public-safe: the task is to harden a document-only reference package with machine-checkable contracts and CI.
+This fictional, public-safe case shows a medium-risk documentation hardening task. It remains a protocol example, not an orchestration implementation.
 
-## 1. Request
-
-```text
-Review feedback says the package is a strong operating philosophy, but it needs schemas, examples, CI, and a threat model so the evidence gate is applied to the repository itself.
-```
-
-## 2. Mission contract
+## Mission contract
 
 ```yaml
-mission:
-  objective: "Harden the public reference package so its mission contracts, final reports, examples, and public-release checks are machine-checkable."
-  non_goals:
-    - "Build a full orchestration platform or agent runtime."
-    - "Add private operational names, chat IDs, credentials, or machine-specific paths."
-  assumptions:
-    - "The repository remains a vendor-neutral documentation/reference package."
-    - "CI may use common open-source linting and validation tools."
-  success_criteria:
-    - criterion: "Mission contracts and final reports have machine-checkable structure."
-      required_evidence: "JSON Schema files exist and sample YAML validates against them."
-    - criterion: "The repository demonstrates an end-to-end evidence-gated flow."
-      required_evidence: "A case study includes request, mission contract, worker evidence, reviewer findings, judge decision, and final report."
-    - criterion: "Public-release risks are named."
-      required_evidence: "Threat model covers prompt injection, untrusted tool output, artifact tampering, secret leakage, and reviewer independence."
-    - criterion: "Validation can run automatically."
-      required_evidence: "CI workflow runs schema/example validation, Markdown linting, link checks, Mermaid rendering, and sanitization scan."
-  allowed_side_effects:
-    - "Add schemas, scripts, documentation, examples, and CI files to the repository."
-    - "Run local validation commands."
-  output_ownership:
-    owner: "project"
-    expected_location: "repository root, schemas/, scripts/, examples/case-study-001/, and .github/workflows/"
-    retention: "project lifetime"
-    retrieval_method: "git history, README links, and CI logs"
-  local_required: false
-  risk_level: medium
+document_type: mission_contract
+schema_version: "2.0"
+mission_id: case-study-001
+created_at: "2026-07-14T10:00:00Z"
+objective: "Harden a fictional reference package with a coherent v2 evidence protocol."
+non_goals: ["Build an agent runtime, scheduler, queue, or deployment engine."]
+assumptions: ["All examples and identifiers are fictional and public-safe."]
+success_criteria:
+  - criterion_id: schemas-validate
+    condition: "Every v2 document type validates in standalone and Markdown examples."
+    required_evidence_types: [test_result]
+  - criterion_id: public-gates-pass
+    condition: "Public-safety, link, Markdown, and Mermaid gates pass."
+    required_evidence_types: [command_result]
+allowed_capabilities:
+  filesystem:
+    read: ["./**"]
+    write: ["./schemas/**", "./egmo/**", "./tests/**", "./examples/**", "./*.md"]
+  network:
+    domains: ["registry.npmjs.org", "pypi.org"]
+  deployment: false
+  database_mutation: false
+  messaging: false
+output_ownership:
+  owner: project
+  expected_location: "repository root and named protocol directories"
+  retention: project_lifetime
+  retrieval_method: "Version control and validation logs."
+target_subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "1111111111111111111111111111111111111111"
+  locator: "https://example.org/fictional/reference/commit/1"
+risk:
+  level: medium
+  production: false
+approval:
+  kind: explicit
+  approval_id: case-approval-001
+  approved_by: "human:fictional-maintainer"
+  approved_at: "2026-07-14T10:05:00Z"
+  scope: "Edit the fictional repository and run non-destructive validation."
 ```
 
-## 3. Worker evidence
-
-| Evidence item | What it proves |
-|---|---|
-| `schemas/mission-contract.schema.json` | Mission contracts have required fields, evidence criteria, ownership, local boundary, and risk level. |
-| `schemas/final-report.schema.json` | Final reports must include summary, verification evidence, changed/executed actions, outputs, risks, and next actions. |
-| `scripts/validate.py` | Example YAML, schema files, and sanitization patterns can be checked locally and in CI. |
-| `.github/workflows/validate.yml` | The repository applies automated checks on pull requests and pushes. |
-| `THREAT_MODEL.md` | Security and independence risks are explicit instead of implicit. |
-
-## 4. Reviewer findings
+## Execution record
 
 ```yaml
-critic_verdict: PASS_WITH_DEFERRALS
-spec_compliance:
-  - "Schemas cover the current mission and final report templates."
-  - "Case study maps request through judge decision and final report."
-  - "Threat model includes the named risks and reviewer independence criteria."
-missing_evidence:
-  - "A full CLI validator with packaged dependencies is not included."
-risks:
-  - "Markdown lint/link/Mermaid checks depend on CI tools being available."
-  - "Schemas enforce structure, not semantic truthfulness of evidence."
+document_type: execution_record
+schema_version: "2.0"
+execution_id: case-execution-001
+mission_id: case-study-001
+idempotency_key: "case-study-001-attempt-1"
+worker: "runtime:fictional-worker-v2"
+worker_runtime_ref: "runtime:fictional-worker-v2"
+worker_model_ref: "model:fictional-implementer-v2"
+worker_execution_id: case-worker-run-001
+environment_ref: "container:python-3.11-node-22"
+input_subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "1111111111111111111111111111111111111111"
+  locator: "https://example.org/fictional/reference/commit/1"
+output_subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "2222222222222222222222222222222222222222"
+  locator: "https://example.org/fictional/reference/commit/2"
+current_state: PASSED
+state_history:
+  - state: DRAFT
+    at: "2026-07-14T10:00:00Z"
+    actor_ref: "service:fictional-controller"
+  - state: APPROVED
+    at: "2026-07-14T10:05:00Z"
+    actor_ref: "human:fictional-maintainer"
+  - state: RUNNING
+    at: "2026-07-14T10:10:00Z"
+    actor_ref: "runtime:fictional-worker-v2"
+  - state: EVIDENCE_PENDING
+    at: "2026-07-14T10:39:00Z"
+    actor_ref: "runtime:fictional-worker-v2"
+  - state: REVIEW_PENDING
+    at: "2026-07-14T10:40:00Z"
+    actor_ref: "service:fictional-controller"
+  - state: PASSED
+    at: "2026-07-14T11:00:00Z"
+    actor_ref: "service:fictional-judge"
+retry_policy:
+  max_attempts: 2
+  remaining_attempts: 1
+timeout_seconds: 3600
+attempt: 1
+failure: null
+cancellation: null
+rollback_or_compensation: null
+```
+
+## Worker evidence
+
+```yaml
+document_type: evidence_record
+schema_version: "2.0"
+evidence_record_id: case-evidence-record-001
+mission_id: case-study-001
+execution_id: case-execution-001
+producer: "runtime:fictional-worker-v2"
+subject: &case_subject
+  kind: git_commit
+  algorithm: git-sha1
+  value: "2222222222222222222222222222222222222222"
+  locator: "https://example.org/fictional/reference/commit/2"
+items:
+  - evidence_id: case-test-evidence-001
+    criterion_ids: [schemas-validate]
+    evidence_type: test_result
+    captured_at: "2026-07-14T10:35:00Z"
+    expires_at: "2026-08-14T10:35:00Z"
+    subject: *case_subject
+    description: "The schema and cross-document suite passed."
+    result: pass
+    details:
+      command: "python3 -m unittest discover -s tests -v"
+      exit_status: 0
+      started_at: "2026-07-14T10:34:00Z"
+      ended_at: "2026-07-14T10:35:00Z"
+      environment_ref: "container:python-3.11-node-22"
+      output_artifact:
+        uri: "https://example.org/artifacts/case-tests.txt"
+        digest: "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+  - evidence_id: case-gates-evidence-001
+    criterion_ids: [public-gates-pass]
+    evidence_type: command_result
+    captured_at: "2026-07-14T10:38:00Z"
+    expires_at: "2026-08-14T10:38:00Z"
+    subject: *case_subject
+    description: "The public package gates completed successfully."
+    result: pass
+    details:
+      command: "npm run validate && npm run lint:markdown && npm run lint:mermaid"
+      exit_status: 0
+      started_at: "2026-07-14T10:35:00Z"
+      ended_at: "2026-07-14T10:38:00Z"
+      environment_ref: "container:python-3.11-node-22"
+      output_artifact:
+        uri: "https://example.org/artifacts/case-gates.txt"
+        digest: "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+known_limits:
+  - "The case proves protocol structure, not correctness of every future adopter policy."
+```
+
+## Critic review
+
+The official v2 schema has four verdicts. This review uses `PASS` because every criterion is satisfied and no must-fix item remains. A bounded improvement is represented as a structured deferral rather than inventing a fifth verdict.
+
+```yaml
+document_type: critic_review
+schema_version: "2.0"
+review_id: case-review-001
+mission_id: case-study-001
+execution_id: case-execution-001
+evidence_record_ids: [case-evidence-record-001]
+reviewed_at: "2026-07-14T10:50:00Z"
+valid_until: "2026-08-14T10:50:00Z"
+subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "2222222222222222222222222222222222222222"
+  locator: "https://example.org/fictional/reference/commit/2"
+reviewer: "runtime:fictional-reviewer-v2"
+review_execution_id: case-review-run-001
+provenance:
+  runtime_ref: "runtime:fictional-reviewer-v2"
+  model_ref: "model:fictional-critic-v2"
+  worker_execution_ref: case-worker-run-001
+  context_sources: ["https://example.org/review-packets/case-study-001"]
+  context_scope: "Mission, diff, schemas, immutable evidence artifacts, and test output."
+  access_mode: read_only
+  read_only: true
+  conflicts: []
+verdict: PASS
+criteria:
+  - criterion_id: schemas-validate
+    status: satisfied
+    evidence_ids: [case-test-evidence-001]
+    rationale: "The typed test result covers every supported document type."
+  - criterion_id: public-gates-pass
+    status: satisfied
+    evidence_ids: [case-gates-evidence-001]
+    rationale: "The command record covers sanitization, links, Markdown, and real Mermaid rendering."
+findings: []
 must_fix: []
-can_defer:
-  - "Package the validator as a CLI if external adopters need local installation."
-  - "Add more pass/fail evidence examples for additional task types."
+deferrals:
+  - description: "Add adopter-specific semantic policy only when a concrete integration needs it."
+    accepted_by: "human:fictional-maintainer"
+    expires_at: "2026-08-14T10:50:00Z"
 ```
 
-## 5. Evidence judge decision
-
-| Criterion | Decision | Evidence |
-|---|---|---|
-| Machine-checkable structure | Pass | `schemas/*.schema.json`, `scripts/validate.py` |
-| End-to-end flow | Pass | This case study contains request, contract, evidence, review, decision, and report |
-| Public-release risks | Pass | `THREAT_MODEL.md` |
-| Automatic validation | Pass with CI dependency | `.github/workflows/validate.yml` |
-
-Residual risk: schemas and CI reduce drift but cannot prove that evidence is true. Human or independent-agent judgment is still required for high-impact work.
-
-## 6. Final report
+## Final report
 
 ```yaml
-summary:
-  - "The reference package now has schema-backed examples, a threat model, a validation script, and CI checks."
-verified:
-  - evidence: "JSON Schema validation for mission and final-report examples"
-    result: "Examples conform to the documented structure."
-  - evidence: "Sanitization scan"
-    result: "Public files are checked for obvious private-operation identifiers and secret-shaped assignments."
-changed_or_executed:
-  - "Added mission contract and final report schemas."
-  - "Added repository validation script."
-  - "Added public-safe case study."
-  - "Added CI workflow for validation, Markdown, links, Mermaid, and sanitization."
+document_type: final_report
+schema_version: "2.0"
+report_id: case-report-001
+mission_id: case-study-001
+execution_id: case-execution-001
+review_id: case-review-001
+subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "2222222222222222222222222222222222222222"
+  locator: "https://example.org/fictional/reference/commit/2"
+judgment: PASSED
+summary: ["The fictional package now implements the evidence protocol and passes its gates."]
+verified_criterion_ids: [schemas-validate, public-gates-pass]
+evidence_ids: [case-test-evidence-001, case-gates-evidence-001]
+changed_or_executed: ["Updated schemas, validation, examples, documentation, and CI checks."]
 outputs:
-  - path_or_url: "schemas/mission-contract.schema.json"
-    owner: "project"
+  - uri: "https://example.org/artifacts/fictional-reference-v2"
+    owner: "fictional reference project"
     retention: "project lifetime"
-    retrieval: "Git path and README repository contents table"
-  - path_or_url: "examples/case-study-001/README.md"
-    owner: "project"
-    retention: "project lifetime"
-    retrieval: "Git path and README repository contents table"
-remaining_risks:
-  - "CI tooling availability may differ across environments."
-  - "Schema validation checks structure, not the factual truth of evidence claims."
-next_actions_if_needed:
-  - "Add more case studies for code changes, local-only tasks, and API integrations if adoption requires them."
+    retrieval: "Version control and release manifest."
+    subject:
+      kind: git_commit
+      algorithm: git-sha1
+      value: "2222222222222222222222222222222222222222"
+      locator: "https://example.org/fictional/reference/commit/2"
+remaining_risks: ["A passing structural protocol cannot prove the truth of unmodeled external claims."]
+next_actions: []
 ```

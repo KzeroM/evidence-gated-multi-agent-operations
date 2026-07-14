@@ -2,398 +2,140 @@
 
 [English](README.md) / [한국어](README.ko.md)
 
-This reference architecture helps teams conduct complex AI-assisted work by separating **intent translation, orchestration, execution, critique, output ownership, and completion judgment**.
+This repository is a vendor-neutral reference protocol for evidence-gated AI-assisted operations. It is not an agent runtime, scheduler, queue, deployment service, or orchestration engine.
 
-It is built around one rule:
+The core rule is simple: a completion claim is not proof. Bind a mission, execution, evidence, independent review, and final judgment to the same immutable subject, then accept the outcome only while that evidence remains fresh.
 
-> **Do not treat an agent's completion claim as proof. Require evidence, place outputs deliberately, and judge the result against explicit success criteria.**
+## Trust model
 
-## Overview
+The general architecture has two boundaries:
 
-This reference architecture assumes that LLM workers and orchestration services run on a remote VPS.
-The VPS is the primary remote execution boundary: it handles remote model execution, orchestration, public and network discovery, automation, evidence collection, and durable task state.
-A user's local machine is a separate, optional execution boundary, used only when work requires local files, a GUI, device or session state, secrets, or privileged actions that cannot safely run on the VPS.
-Any crossing between the two boundaries requires an explicit, scoped handoff and evidence returned to the VPS-side workflow; acceptance by the transport alone does not prove completion.
-This is an architectural operating assumption, not a requirement that every role use a separate physical server or process, and not a promise of a hosted service.
+- An **untrusted or remotely managed execution boundary** may host workers, public-network access, and coordination. Its output is treated as a claim.
+- A **trusted or privileged boundary** may hold private files, credentials, user sessions, deployment authority, or production resources. Crossing it requires scoped approval and returned evidence.
 
-## Repository contents
+A virtual private server (VPS) is one useful deployment profile for the first boundary, not a protocol requirement. Roles may run on any vendor, host, or human process that preserves the declared capabilities and review separation.
 
-```text
-README.md                         # Main public reference
-README.ko.md                      # Korean translation
-THREAT_MODEL.md                   # Public threat model and independence criteria
-SECURITY.md                       # Safe vulnerability-reporting guidance
-CONTRIBUTING.md                   # Public-safe contribution and validation guide
-CODE_OF_CONDUCT.md                # Community expectations and enforcement
-LICENSE                           # Creative Commons Attribution 4.0 International
-diagrams/                         # Standalone Mermaid diagrams
-examples/                         # Reusable mission/report templates and case studies
-templates/                        # Ready-to-copy mission, evidence, review, and handoff files
-schemas/                          # JSON Schemas for contracts, evidence, reviews, and reports
-scripts/                          # Repository validation scripts
-tests/                            # Sanitization and validation regression tests
-.github/workflows/                # CI validation for docs, schemas, diagrams, links, and sanitization
+```mermaid
+flowchart LR
+    A[Untrusted inputs] --> B[Remotely managed worker boundary]
+    B --> C[Evidence packet]
+    C --> D[Independent read-only review]
+    D --> E{Evidence judgment}
+    E -->|Scoped handoff| F[Trusted or privileged boundary]
+    F --> C
+    E -->|Pass while fresh| G[Final report]
 ```
 
-## Quick start
+## Protocol v2
 
-Install the validation dependencies and run the same checks used by CI:
+Every machine-checkable YAML document declares `document_type` and `schema_version: "2.0"`. The supported types are:
+
+| Document | Purpose |
+| --- | --- |
+| `mission_contract` | Objective, stable criterion IDs, capabilities, immutable target, risk, and approval |
+| `execution_record` | Protocol state, worker provenance, retry/timeout/idempotency, failure, cancellation, and rollback references |
+| `evidence_record` | Typed evidence bound to criterion IDs, execution, immutable subject, and freshness window |
+| `critic_review` | Independent provenance, criterion decisions, verdict, findings, fixes, and accepted deferrals |
+| `final_report` | Judgment, verified IDs, immutable subject, outputs, residual risks, and next actions |
+
+The schemas are strict Draft 2020-12 JSON Schemas under [`schemas/`](schemas/). Cross-document rules that JSON Schema cannot express are enforced by `egmo validate` and `egmo judge`.
+
+Stable IDs are references, not copied prose: `mission_id`, `criterion_id`, `execution_id`, `evidence_id`, and `review_id`. Immutable subjects support Git commit IDs, SHA-256 file or OCI digests, and typed deployment/resource revisions. A mutation produces a new subject; an earlier `PASS` does not transfer to it. Evidence has `captured_at` and `expires_at`, while a review has `reviewed_at` and `valid_until`.
+
+## Verdict and state semantics
+
+| Review verdict | Meaning |
+| --- | --- |
+| `PASS` | Every applicable criterion is satisfied by referenced, fresh evidence for the exact subject; no must-fix item remains |
+| `REQUEST_CHANGES` | The subject can be corrected; at least one must-fix item is recorded |
+| `BLOCKED` | Progress requires unavailable authority, dependency, or boundary access |
+| `INCONCLUSIVE` | Available evidence cannot support either pass or a specific correction |
+
+Execution records can represent `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNING`, `EVIDENCE_PENDING`, `REVIEW_PENDING`, `PASSED`, `BLOCKED`, `CHANGES_REQUESTED`, `CANCELLED`, `PARTIAL_SUCCESS`, `ROLLBACK_PENDING`, and `ROLLED_BACK`. The validator checks ordered, allowed state transitions, retry accounting, cancellation/rollback metadata, and agreement among execution state, review verdict, and final judgment. These are protocol facts only; this package does not transition or schedule work.
+
+## Risk, approval, and independence
+
+- Low risk may use a named policy approval.
+- Medium risk requires explicit contract approval before execution.
+- High-risk or production work requires explicit scoped approval with expiry and a rollback or compensation plan.
+- Production is always classified high risk.
+- High risk requires a reviewer runtime and review execution distinct from the worker and worker execution, with read-only review access.
+
+Reviewer provenance records reviewer identity, runtime/model references, separate execution references, context sources and scope, access mode, conflicts, and read-only status. Logical separation is useful at all levels; v2 makes runtime separation mechanically mandatory for high risk.
+
+Allowed side effects are capabilities rather than prose: filesystem read/write globs, network domains, and deployment, database-mutation, and messaging flags. Enforcement belongs to the surrounding environment; the protocol makes the grant inspectable.
+
+## Typed evidence
+
+Evidence types are `command_result`, `test_result`, `read_back`, `api_response`, and `artifact`. Command/test records include the command, exit status, RFC 3339 start/end times, environment reference, and immutable output artifact. API, read-back, and artifact records carry a source/artifact URI and digest. Bounded descriptions explain relevance but never replace typed fields.
+
+## CLI
+
+Install and use the small validation package:
+
+```bash
+python3 -m pip install -e .
+egmo validate
+egmo validate --mode tracked
+egmo validate --mode history
+egmo judge templates/mission.yaml templates/execution-record.yaml templates/evidence.yaml templates/critic-review.yaml templates/final-report.yaml
+egmo create-task ./task-packet --mission-id example-mission-0002
+```
+
+Exit codes are deterministic: `0` means validation passed or the chain judgment is `PASSED`; `1` means validation/judgment did not pass; `2` means usage, input, or operational error. `create-task` copies protocol documents only and performs no execution.
+
+By default, `judge` checks freshness at the review's embedded `reviewed_at` timestamp for deterministic replay. Operational callers should pass an explicit current RFC 3339 `--as-of` value. CI intentionally uses the embedded timestamp so template freshness dates remain self-contained and cannot drift apart from a separately hardcoded smoke-test date.
+
+## Evidence flow
+
+```mermaid
+flowchart TD
+    A[Human intent] --> B[Mission contract and approval]
+    B --> C[Execution record]
+    C --> D[Typed evidence bound to subject]
+    D --> E[Independent critic review]
+    E --> F{Judge criteria and freshness}
+    F -->|PASS| G[Final report]
+    F -->|REQUEST_CHANGES| C
+    F -->|BLOCKED or INCONCLUSIVE| H[Escalate with evidence]
+```
+
+Ready-to-copy documents are in [`templates/`](templates/). A complete Markdown chain is in [`examples/protocol-chain.md`](examples/protocol-chain.md). [`examples/failure-cases.md`](examples/failure-cases.md) covers insufficient evidence, tampering, stale artifacts, non-independent review, failed handoff, and rollback. [`examples/case-study-001/`](examples/case-study-001/) demonstrates conforming deferrals and judgment.
+
+## Validation and public safety
 
 ```bash
 python3 -m pip install -r requirements-dev.txt
 npm ci
-npm run validate
+python3 -m compileall -q egmo scripts tests
+egmo validate --mode working-tree
+egmo validate --mode tracked
+egmo validate --mode history
 npm test
+npm run scan:secrets
 npm run lint:markdown
 npm run lint:mermaid
+npm run smoke:package
 ```
 
-Start a new evidence-gated task by copying the standalone templates:
+The package smoke gate builds both the sdist and wheel, clean-installs each into an isolated environment, and exercises the installed `egmo` from outside the source checkout.
 
-```bash
-cp templates/mission.yaml mission.yaml
-cp templates/evidence.yaml evidence.yaml
-cp templates/critic-review.yaml critic-review.yaml
-```
+The configurable [`sanitization-policy.yaml`](sanitization-policy.yaml) scans working-tree, tracked, or Git-history content across documentation, schemas, source, shell, JS/TS, TOML, INI, CSV, and environment-shaped text. It detects secret-shaped assignments, non-example emails and addresses, private POSIX/Windows paths, internal hostnames, chat identifiers, IPv4, and IPv6. This deterministic scanner is defense in depth; CI additionally runs the pinned standard `detect-secrets` scanner.
 
-Use [`templates/local-handoff.md`](templates/local-handoff.md) only when work must cross into a local or privileged boundary. The schema-backed final-report template remains at [`examples/final-report-template.md`](examples/final-report-template.md).
+Mermaid validation uses the real Mermaid CLI renderer for standalone and inline diagrams. The regression test asserts that a malformed diagram is rejected. Links and every fenced YAML example are also validated.
 
----
+## Migration from v1
 
-## Why this exists
+Version 2 is intentionally breaking. V1 shape-based Markdown dispatch, copied criterion prose, free-form side effects/evidence, unversioned reviews, and `PASS_WITH_DEFERRALS` are not accepted. Add the document discriminator/version, assign stable IDs, convert side effects and evidence to typed objects, add immutable subject and freshness metadata, create an execution record, capture reviewer provenance, and use `PASS` plus structured `deferrals` only when all criteria are satisfied. Keep a v1 archive separate if historical fidelity is required.
 
-Single-agent workflows often collapse too many responsibilities into one loop:
+## Deployment profiles
 
-- interpreting ambiguous human intent
-- choosing the plan
-- editing files or calling tools
-- reviewing the result
-- deciding where artifacts should live
-- declaring the task complete
+- **VPS-first example:** a remotely managed VPS hosts coordination and untrusted workers; a local/privileged executor receives explicit handoffs.
+- **Managed CI:** CI is the worker boundary and protected environments form the privileged boundary.
+- **Human-led:** people fill every role and use the schemas as an audit packet.
 
-That creates predictable failures:
-
-| Failure Mode | What it looks like |
-|---|---|
-| Self-certification | The same agent executes the work and declares it done without independent checks |
-| Missing evidence | Summaries say "fixed" but no tests, logs, diffs, screenshots, or read-backs are provided |
-| Wrong output location | Files appear in arbitrary folders and cannot be found, reused, or audited later |
-| Hidden trust-boundary violation | Remote or public-side tools assume access to local files, secrets, GUI state, or production systems |
-| Rubber-stamp review | Review checks style but not success criteria, evidence, or failure modes |
-| Confident failure | Errors are summarized away instead of classified, retried, or reported as blockers |
-
-Evidence-gated operations reduce these failures by separating duties and making completion auditable.
-
----
-
-## Core idea
-
-```text
-Human Intent
-  -> Intent Translator
-  -> Mission Contract
-  -> Orchestrator
-  -> Implementation Agent
-  -> Evidence + Owned Outputs
-  -> Critic / Reviewer
-  -> Evidence Judge
-  -> User-facing Result or Retry
-```
-
-The important separation is not about how many tools or models you use. It is about **which responsibility is allowed to certify which claim**.
-
----
-
-## Control flow
-
-```mermaid
-flowchart TD
-    A[Human Intent] --> B[Intent Translator]
-    B --> C[Mission Contract]
-    C --> D[Orchestrator]
-    D --> E[Implementation Agent]
-    E --> F[Evidence + Owned Outputs]
-    F --> G[Critic / Reviewer]
-    G --> H{Evidence Judge}
-    H -->|Pass| I[User-facing Result]
-    H -->|Missing Evidence| D
-    H -->|Wrong Boundary| J[Local or Privileged Execution]
-    J --> F
-```
-
----
-
-## Roles
-
-| Role | Responsibility | Boundary |
-|---|---|---|
-| Intent Translator | Converts human intent into objective, assumptions, constraints, and success criteria | Does not own long-running execution loops |
-| Orchestrator | Routes work, tracks state, manages retries, and coordinates workers/reviewers | Does not claim completion without evidence |
-| Implementation Agent | Plans, edits, runs commands, tests, and gathers evidence | Does not self-certify final success |
-| Critic / Reviewer | Looks for spec drift, missing evidence, risks, and failure modes | Does not perform the primary implementation |
-| Independent Reviewer | Provides a second opinion or tie-break on high-uncertainty work | Used selectively when the uncertainty justifies cost |
-| Evidence Judge | Maps results back to success criteria and decides whether completion is justified | Treats self-reports as claims, not proof |
-| Local / Privileged Executor | Handles local files, GUI, secrets, deployments, or machine-specific state | Stays behind an explicit trust and approval boundary |
-
-A single runtime can perform multiple roles, but the responsibilities should remain logically separate.
-
----
-
-## Mission contract
-
-A mission contract is the work unit passed into orchestration.
-
-```yaml
-mission:
-  objective: "What should be true when this is done?"
-  non_goals:
-    - "What should not be changed or attempted?"
-  assumptions:
-    - "What is believed but not yet proven?"
-  success_criteria:
-    - criterion: "Specific condition that must be satisfied"
-      required_evidence: "Test, log, diff, read-back, screenshot, API response, etc."
-  allowed_side_effects:
-    - "Permitted file changes, commands, messages, API calls, or deployments"
-  output_ownership:
-    owner: "project | artifact store | scratch | user-delivery | local-only"
-    expected_location: "Where durable outputs should be written"
-    retention: "temporary | task artifact | project lifetime | long-term reference"
-    retrieval_method: "How this output should be found later"
-  local_required: false
-  risk_level: low
-```
-
-Good mission contracts are compact, explicit, and testable. The repository includes a machine-checkable schema at [`schemas/mission-contract.schema.json`](schemas/mission-contract.schema.json).
-
----
-
-## Evidence gates
-
-Different tasks require different proof.
-
-| Task type | Minimum evidence |
-|---|---|
-| Research / web validation | Source URLs, official docs when possible, and current checks when relevant |
-| Code change | Diff summary, targeted tests, and relevant smoke test |
-| Config change | Read-back of config plus command or behavior showing it is active |
-| Install / setup | Version/help/status command with successful exit status |
-| API integration | Live request/response sample with secrets redacted |
-| Local-only task | Structured handoff or local execution report with artifacts |
-| Architecture decision | Tradeoff memo plus critic pass or explicitly accepted risks |
-| Public reference material | Sanitized draft, provenance, output location, retrieval check, and validation run |
-
-Rule of thumb:
-
-> If the evidence would not convince a skeptical reviewer, the task is not done yet.
-
----
-
-## Output ownership
-
-Evidence-gated work should not create files in arbitrary locations. Every durable output needs an ownership decision before it is written.
-
-```mermaid
-flowchart TD
-    A[New Output] --> B{What owns it?}
-    B -->|Project deliverable| C[Project repo or workspace]
-    B -->|Evidence / logs| D[Dated artifact directory]
-    B -->|Reusable reference| E[Indexed knowledge base or artifact store]
-    B -->|Temporary experiment| F[Named scratch area + cleanup expectation]
-    B -->|User-facing file| G[Delivery folder or attached artifact]
-    C --> H[Record verification]
-    D --> H
-    E --> H
-    F --> H
-    G --> H
-```
-
-| Output class | Good default | Avoid |
-|---|---|---|
-| Project deliverable | Relevant project repository or workspace | Untracked folders outside the project |
-| Evidence / logs / task notes | Dated artifact directory with manifest and verification notes | Chat-only summaries with no retrievable artifact |
-| Reusable reference material | Knowledge base or artifact location indexed for retrieval | One-off scratch files that cannot be found later |
-| Temporary experiment | Clearly named scratch area with cleanup expectations | Ambiguous top-level directories |
-| User-facing file | Delivery folder or attached artifact with provenance | Silent file creation in an unexpected path |
-
-Before writing a file, ask:
-
-1. Who owns this output?
-2. How long should it live?
-3. How will it be found again?
-4. What evidence proves it is the right file in the right place?
-
----
-
-## Trust boundaries
-
-```mermaid
-flowchart LR
-    A[Public Web / External APIs] --> B[Remote Sandbox]
-    B --> C[Orchestration Layer]
-    C --> D{Trust Boundary}
-    D --> E[Local / Privileged Executor]
-    E --> F[Local Files / GUI / Secrets / Production]
-    C --> G[Evidence Store / Final Report]
-```
-
-| Boundary | Typical capabilities | Restrictions |
-|---|---|---|
-| Public / Web | Documentation lookup, public API checks, package metadata | Treat all input as untrusted |
-| Remote Sandbox | External discovery, safe probes, first-pass validation | No unsupervised access to private local state |
-| Orchestration Layer | Routing, state tracking, retries, agent coordination | Should not bypass evidence gates |
-| Local Machine | Files, GUI, secrets, installed apps, user-specific state | Requires explicit local boundary handling |
-| Production / High-impact Systems | Deployment, data mutation, billing, credential rotation | Requires explicit approval, rollback plan, and stronger evidence |
-
----
-
-## Good vs bad patterns
-
-| Situation | Bad pattern | Better pattern |
-|---|---|---|
-| Multi-step implementation | Worker edits code, says "done" | Worker provides diff + tests; reviewer checks; judge maps evidence to criteria |
-| Public architecture draft | File is written to a random folder | File is placed in an owned artifact/project location and indexed for retrieval |
-| Local secret needed | Remote agent guesses config or asks for secrets in chat | Remote agent produces a local handoff with exact actions and stop condition |
-| Failed command | Retry the same command until it works or summarize away the error | Classify failure, change hypothesis, try safe alternative, or report blocker with evidence |
-| Review step | Reviewer says "looks good" | Reviewer lists spec compliance, missing evidence, risks, must-fix, can-defer |
-| Final response | "Completed" | Summary + verified evidence + changed/executed actions + remaining risks + next actions |
-
----
-
-## Example mission contracts
-
-### Example 1: Publishable reference document
-
-```yaml
-mission:
-  objective: "Create a public reference README for an AI operations architecture."
-  non_goals:
-    - "Expose private agent names, chat IDs, credentials, paths, or provider-specific internals."
-  assumptions:
-    - "The target audience wants a reusable pattern, not a private operations manual."
-  success_criteria:
-    - criterion: "README explains the pattern clearly."
-      required_evidence: "Readable Markdown with diagrams, roles, gates, examples, and security notes."
-    - criterion: "No private/internal names are present."
-      required_evidence: "Sanitization search returns zero matches for the internal-name list."
-    - criterion: "The draft can be reused later."
-      required_evidence: "File is stored in an indexed artifact or project location with manifest/verification notes."
-  allowed_side_effects:
-    - "Write Markdown and Mermaid files under the chosen artifact or project path."
-    - "Rebuild the artifact/search index."
-  output_ownership:
-    owner: "artifact store"
-    expected_location: "artifacts/<date>/<task-id>/files/public-architecture/README.md"
-    retention: "long-term reference"
-    retrieval_method: "artifact index search"
-  local_required: false
-  risk_level: low
-```
-
-### Example 2: Code change with review
-
-```yaml
-mission:
-  objective: "Fix a bug in a project and verify the fix."
-  non_goals:
-    - "Rewrite unrelated modules."
-    - "Change production configuration."
-  assumptions:
-    - "The bug is reproducible with a targeted test or smoke command."
-  success_criteria:
-    - criterion: "Bug is reproduced before the fix."
-      required_evidence: "Failing test, log, or minimal reproduction."
-    - criterion: "Bug is fixed with minimal targeted change."
-      required_evidence: "Diff summary and passing targeted test."
-    - criterion: "No obvious regression is introduced."
-      required_evidence: "Relevant smoke test or existing test subset passes."
-  allowed_side_effects:
-    - "Modify files in the project workspace."
-    - "Run local tests and linters."
-  output_ownership:
-    owner: "project"
-    expected_location: "project repository"
-    retention: "project lifetime"
-    retrieval_method: "git diff, test logs, artifact verification notes"
-  local_required: false
-  risk_level: medium
-```
-
----
-
-## Minimal implementation
-
-You do not need a large platform to use the pattern.
-
-A minimal setup can be:
-
-```text
-1. Human writes request.
-2. Translator writes mission contract.
-3. Orchestrator tracks checklist, retries, and owner boundaries.
-4. Worker executes commands or edits.
-5. Outputs are placed in the correct project/artifact/scratch/delivery location.
-6. Reviewer checks spec compliance, risks, and missing evidence.
-7. Judge maps evidence to success criteria.
-8. Final report separates: done, verified, risks, and next actions.
-```
-
-The roles can be humans, agents, scripts, or a mix.
-
----
-
-## Final report template
-
-```yaml
-summary:
-  - "What changed or what was learned"
-
-verified:
-  - evidence: "Command, test, URL, artifact, log, diff, screenshot, or read-back"
-    result: "What it proves"
-
-changed_or_executed:
-  - "Actions actually performed"
-
-outputs:
-  - path_or_url: "Where the durable output lives"
-    owner: "Who owns it"
-    retention: "How long it should live"
-    retrieval: "How to find it later"
-
-remaining_risks:
-  - "What could still be wrong or unverified"
-
-next_actions_if_needed:
-  - "Specific next step, owner, and stop condition"
-```
-
-Avoid final reports that only say "done" or "looks good." The report should expose evidence and output provenance. The repository includes a machine-checkable schema at [`schemas/final-report.schema.json`](schemas/final-report.schema.json) and an end-to-end example in [`examples/case-study-001/`](examples/case-study-001/).
-
----
-
-## When to use this pattern
-
-Use it when:
-
-- the task has three or more meaningful steps
-- failure would be costly or hard to detect
-- multiple agents, models, tools, or environments are involved
-- local/private state matters
-- completion requires files, code, configuration, or other durable outputs
-- review and evidence are important
-
-Do not overuse it for:
-
-- simple one-shot questions
-- low-risk formatting or drafting tasks with no durable artifact
-- quick lookups where one source check is enough
-- tasks where orchestration overhead exceeds the benefit
-
----
+See [`THREAT_MODEL.md`](THREAT_MODEL.md), [`SECURITY.md`](SECURITY.md), and [`CONTRIBUTING.md`](CONTRIBUTING.md) for controls and contribution gates.
 
 ## License
 
-This reference package is licensed under the **Creative Commons Attribution 4.0 International License (CC BY 4.0)**.
-
-See [`LICENSE`](LICENSE) for the full license text.
+Licensed under Creative Commons Attribution 4.0 International. See [`LICENSE`](LICENSE).

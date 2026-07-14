@@ -1,24 +1,44 @@
-mission:
-  objective: "Produce a public-safe reference artifact for a fictional project."
-  non_goals:
-    - "Access private systems or publish private operational context."
-    - "Change production configuration."
-  assumptions:
-    - "All identifiers and inputs supplied to the task are fictional or already public."
-  success_criteria:
-    - criterion: "The requested artifact exists at its owned location."
-      required_evidence:
-        - "Artifact path and content read-back."
-        - "Relevant deterministic validation output."
-    - criterion: "The result is safe for public release."
-      required_evidence: "Sanitization scan and independent review both pass."
-  allowed_side_effects:
-    - "Create or edit files inside the project repository."
-    - "Run local, non-destructive validation commands."
-  output_ownership:
-    owner: "project"
-    expected_location: "docs/example-reference.md"
-    retention: "project lifetime"
-    retrieval_method: "Version-controlled project path."
-  local_required: false
-  risk_level: low
+document_type: mission_contract
+schema_version: "2.0"
+mission_id: example-mission-0001
+created_at: "2026-07-14T09:00:00Z"
+objective: "Produce a public-safe reference artifact for a fictional project."
+non_goals:
+  - "Access private systems or change production configuration."
+assumptions:
+  - "All supplied identifiers and inputs are fictional or public."
+success_criteria:
+  - criterion_id: artifact-exists
+    condition: "The requested artifact exists at its owned location."
+    required_evidence_types: [artifact]
+  - criterion_id: validation-passes
+    condition: "The deterministic validation suite passes."
+    required_evidence_types: [command_result]
+allowed_capabilities:
+  filesystem:
+    read: ["./**"]
+    write: ["./docs/**"]
+  network:
+    domains: []
+  deployment: false
+  database_mutation: false
+  messaging: false
+output_ownership:
+  owner: project
+  expected_location: "docs/example-reference.md"
+  retention: project_lifetime
+  retrieval_method: "Version-controlled project path."
+target_subject:
+  kind: git_commit
+  algorithm: git-sha1
+  value: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  locator: "https://example.org/fictional/reference/revision/a"
+risk:
+  level: medium
+  production: false
+approval:
+  kind: explicit
+  approval_id: example-approval-0001
+  approved_by: "human:example-approver"
+  approved_at: "2026-07-14T09:05:00Z"
+  scope: "Edit documentation and run local checks in the fictional project."
