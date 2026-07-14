@@ -9,6 +9,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from functools import cache
 from pathlib import Path
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -102,7 +103,9 @@ class LoadedDocument:
     label: str
 
 
+@cache
 def _schema_registry() -> tuple[dict[str, dict[str, Any]], Registry]:
+    """Load the package's immutable schema set once per interpreter."""
     schemas: dict[str, dict[str, Any]] = {}
     resources: list[tuple[str, Resource[dict[str, Any]]]] = []
     for path in sorted(SCHEMA_DIR.glob("*.schema.json")):
@@ -464,8 +467,11 @@ def validate_chain(documents: Iterable[LoadedDocument], as_of: datetime | None =
                 errors.append(f"{review.label}: medium/high-risk review execution must differ from worker execution")
             if not provenance["read_only"]:
                 errors.append(f"{review.label}: medium/high-risk reviewer must be read-only")
-            if provenance["access_mode"] != "read_only":
-                errors.append(f"{review.label}: medium/high-risk review access_mode must be read_only")
+            if provenance["access_mode"] not in {"read_only", "offline_packet"}:
+                errors.append(
+                    f"{review.label}: medium/high-risk review access_mode must be "
+                    "read_only or offline_packet"
+                )
         if provenance["access_mode"] == "read_write" and provenance["read_only"]:
             errors.append(f"{review.label}: read_write access_mode cannot claim read_only status")
         reviewed_at = _parse_time(data["reviewed_at"])

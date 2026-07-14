@@ -59,10 +59,12 @@ Execution records can represent `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `RUNNIN
 - Medium risk requires explicit contract approval before execution.
 - High-risk or production work requires explicit scoped approval with expiry and a rollback or compensation plan.
 - Production is always classified high risk.
-- Medium and high risk require a reviewer runtime and review execution distinct from the worker and worker execution, with read-only review access.
+- Medium and high risk require a reviewer runtime and review execution distinct from the worker and worker execution. Review access must set `read_only: true`; `access_mode` may be live `read_only` or an immutable `offline_packet`, while `read_write` is rejected.
 - Low risk may retain policy-based or logical reviewer separation, but must still disclose reviewer provenance.
 
 Reviewer provenance records reviewer identity, runtime/model references, separate execution references, context sources and scope, access mode, conflicts, and read-only status. The validator checks the medium/high independence rule across the mission, execution, and review records; it remains a protocol validator and does not launch or isolate reviewers.
+
+An `offline_packet` exposes no live writable surface, so the protocol treats an immutable packet as at least as isolated as live read-only review. The validator requires the accompanying `read_only` claim but cannot establish packet immutability or enforce runtime access; the surrounding review system must provide and attest those controls.
 
 Allowed side effects are capabilities rather than prose: filesystem read/write globs, network domains, and deployment, database-mutation, and messaging flags. Enforcement belongs to the surrounding environment; the protocol makes the grant inspectable.
 
@@ -119,15 +121,17 @@ npm run lint:mermaid
 npm run smoke:package
 ```
 
-The package smoke gate builds both the sdist and wheel, clean-installs each into an isolated environment, and exercises the installed `egmo` from outside the source checkout.
+The package smoke gate builds both the sdist and wheel, clean-installs each into an isolated environment, and exercises the installed `egmo` from outside the source checkout. Its warning proof promotes only `RefResolver` deprecations to errors while validating a complete installed template, avoiding a brittle package-wide all-warning policy.
 
 The configurable [`sanitization-policy.yaml`](sanitization-policy.yaml) scans working-tree, tracked, or Git-history content across documentation, schemas, source, shell, JS/TS, TOML, INI, CSV, and environment-shaped text. It detects secret-shaped assignments, non-example emails and addresses, private POSIX/Windows paths, internal hostnames, chat identifiers, IPv4, and IPv6. This deterministic scanner is defense in depth; CI additionally runs the pinned standard `detect-secrets` scanner.
 
 Mermaid validation uses the real Mermaid CLI renderer for standalone and inline diagrams. The regression test asserts that a malformed diagram is rejected. Links and every fenced YAML example are also validated.
 
-## Migration from v1
+## Migration and 2.1 release note
 
-Version 2 is intentionally breaking. V1 shape-based Markdown dispatch, copied criterion prose, free-form side effects/evidence, unversioned reviews, and `PASS_WITH_DEFERRALS` are not accepted. Add the document discriminator/version, assign stable IDs, convert side effects and evidence to typed objects, add immutable subject and freshness metadata, create an execution record, capture reviewer provenance, and use `PASS` plus structured `deferrals` only when all criteria are satisfied. Keep a v1 archive separate if historical fidelity is required. Existing v2 document shapes remain compatible; medium-risk packets must now satisfy the same runtime, execution, and read-only reviewer-independence checks already required for high risk.
+Version 2 is intentionally breaking. V1 shape-based Markdown dispatch, copied criterion prose, free-form side effects/evidence, unversioned reviews, and `PASS_WITH_DEFERRALS` are not accepted. Add the document discriminator/version, assign stable IDs, convert side effects and evidence to typed objects, add immutable subject and freshness metadata, create an execution record, capture reviewer provenance, and use `PASS` plus structured `deferrals` only when all criteria are satisfied. Keep a v1 archive separate if historical fidelity is required.
+
+Implementation release 2.1.0 keeps document `schema_version: "2.0"` and existing v2 shapes. It tightens medium-risk packets to the runtime, execution, and read-only reviewer-independence checks already required for high risk. It also clarifies that `read_only: true` may use live `read_only` access or an immutable `offline_packet`; medium/high `read_write` access remains invalid.
 
 ## Deployment profiles
 

@@ -14,7 +14,8 @@ subject:
 reviewer: "runtime:example-reviewer-v2"
 review_execution_id: example-review-run-0001
 provenance:
-  # Medium/high risk requires a runtime and review_execution_id distinct from the worker and read-only access.
+  # Medium/high risk requires a runtime and review_execution_id distinct from the worker.
+  # Set read_only true; access_mode may be live read_only or immutable offline_packet, never read_write.
   # Low risk may use policy-based/logical separation, with provenance still disclosed.
   runtime_ref: "runtime:example-reviewer-v2"
   model_ref: "model:example-critic-v2"

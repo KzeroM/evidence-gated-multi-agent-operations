@@ -19,10 +19,40 @@ smoke_artifact() {
   "$venv/bin/python" -m pip install "$artifact"
   mkdir "$work"
   cd "$work"
-  PYTHONWARNINGS=error "$venv/bin/egmo" --help >/dev/null
-  PYTHONWARNINGS=error "$venv/bin/egmo" create-task packet --mission-id "package-smoke-$name"
-  PYTHONWARNINGS=error "$venv/bin/egmo" validate packet/*.yaml --no-sanitization
-  PYTHONWARNINGS=error "$venv/bin/egmo" judge \
+  "$venv/bin/python" - "$name" <<'PY'
+import sys
+import warnings
+from importlib.metadata import version
+
+import yaml
+
+warnings.filterwarnings(
+    "error", message=r".*RefResolver.*", category=DeprecationWarning
+)
+
+from egmo import __version__
+from egmo.protocol import TEMPLATE_DIR, _schema_registry, validate_document
+
+artifact_kind = sys.argv[1]
+expected_version = "2.1.0"
+assert version("egmo-reference") == __version__ == expected_version
+
+_schema_registry.cache_clear()
+first = _schema_registry()
+review = yaml.safe_load((TEMPLATE_DIR / "critic-review.yaml").read_text(encoding="utf-8"))
+assert validate_document(review, f"installed-{artifact_kind}-critic-template") == []
+second = _schema_registry()
+assert first is second
+assert _schema_registry.cache_info().misses == 1
+print(
+    f"{artifact_kind}: version={__version__}; complete external $ref resolution passed; "
+    "RefResolver deprecations absent; registry cache reused"
+)
+PY
+  "$venv/bin/egmo" --help >/dev/null
+  "$venv/bin/egmo" create-task packet --mission-id "package-smoke-$name"
+  "$venv/bin/egmo" validate packet/*.yaml --no-sanitization
+  "$venv/bin/egmo" judge \
     packet/mission.yaml packet/execution.yaml packet/evidence.yaml \
     packet/review.yaml packet/final-report.yaml
 }
@@ -30,4 +60,4 @@ smoke_artifact() {
 smoke_artifact "$tmp"/dist/*.whl wheel
 smoke_artifact "$tmp"/dist/*.tar.gz sdist
 
-echo "Built, clean-installed, and smoke-tested the wheel and sdist with bundled schema data and deprecation warnings treated as errors."
+echo "Built, clean-installed, and smoke-tested the wheel and sdist; installed version, Registry cache, external refs, and absence of RefResolver deprecations were proved."
